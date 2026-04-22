@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-// GET has no params; NextRequest used only in POST
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { leaveRequestSchema } from '@/lib/validation/leave';
 import { logActivity } from '@/lib/activity/log';
 
@@ -14,7 +14,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('leave_requests')
-    .select('id, user_id, start_date, end_date, type, status, reason, admin_note, created_at, updated_at')
+    .select('id, user_id, start_date, end_date, type, status, reason, admin_note, deduct_balance, created_at, updated_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -52,7 +52,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const service = createServiceClient();
+
+  const { data: profile } = await service
+    .from('profiles')
+    .select('id, is_active')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.is_active) {
+    return NextResponse.json({ error: 'Profil introuvable ou inactif' }, { status: 403 });
+  }
+
+  const { data, error } = await service
     .from('leave_requests')
     .insert({
       user_id: user.id,
@@ -63,7 +75,7 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       requested_by: user.id,
     })
-    .select('id, user_id, start_date, end_date, type, status, reason, admin_note, created_at, updated_at')
+    .select('id, user_id, start_date, end_date, type, status, reason, admin_note, deduct_balance, created_at, updated_at')
     .single();
 
   if (error) {
