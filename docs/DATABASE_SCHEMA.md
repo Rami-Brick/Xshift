@@ -1,6 +1,6 @@
 # Database Schema
 
-Target: Supabase Postgres. RLS is enabled on every public table. Privileged writes go through Next.js route handlers using the service-role client.
+Target: Supabase Postgres. RLS is enabled on every public table. Employee-facing reads are RLS-scoped to the authenticated user. Admin reads and privileged writes go through Next.js server code using the service-role client after `requireAdmin()`.
 
 ## Enums
 
@@ -21,8 +21,13 @@ create type public.activity_action as enum (
   'create_employee',
   'update_employee',
   'deactivate_employee',
+  'update_attendance',
   'manual_attendance',
   'delete_attendance',
+  'request_leave',
+  'approve_leave',
+  'reject_leave',
+  'cancel_leave',
   'assign_leave',
   'update_leave',
   'delete_leave',
@@ -97,7 +102,7 @@ create table public.leave_requests (
   start_date date not null,
   end_date date not null,
   type public.leave_type not null default 'annual',
-  status public.leave_status not null default 'approved',
+  status public.leave_status not null default 'pending',
   reason text,
   admin_note text,
   requested_by uuid references public.profiles(id),
@@ -166,6 +171,29 @@ $$;
 
 Attached to `profiles`, `attendance`, `leave_requests`, `office_settings`.
 
+`0001_init.sql` also creates a private auth trigger:
+
+```sql
+create schema if not exists app_private;
+
+create or replace function app_private.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+-- Inserts a minimal public.profiles row for each new auth.users row.
+$$;
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function app_private.handle_new_user();
+```
+
+The trigger reads `raw_app_meta_data->>'role'` only to choose `admin` vs
+`employee`, and reads `raw_user_meta_data->>'full_name'` only as profile
+display data. Authorization in app code still uses `public.profiles.role`.
+
 ## Indexes
 
 ```sql
@@ -174,8 +202,11 @@ create index profiles_is_active_idx on public.profiles(is_active);
 create index attendance_user_date_idx on public.attendance(user_id, date desc);
 create index attendance_date_idx on public.attendance(date desc);
 create index attendance_status_idx on public.attendance(status);
-create index leave_user_dates_idx on public.leave_requests(user_id, start_date, end_date);
-create index leave_status_idx on public.leave_requests(status);
+create index attendance_forgot_checkout_idx
+  on public.attendance(forgot_checkout)
+  where forgot_checkout = true;
+create index leave_requests_user_dates_idx on public.leave_requests(user_id, start_date, end_date);
+create index leave_requests_status_idx on public.leave_requests(status);
 create index activity_logs_created_at_idx on public.activity_logs(created_at desc);
 create index activity_logs_actor_idx on public.activity_logs(actor_id);
 create index activity_logs_target_idx on public.activity_logs(target_user_id);
@@ -183,22 +214,11 @@ create index activity_logs_target_idx on public.activity_logs(target_user_id);
 
 ## RLS strategy
 
-Admin identity is verified through a helper:
-
-```sql
-create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
-  );
-$$;
-```
+Current migrations keep browser/client access narrow. There is no public
+`is_admin()` helper in the applied schema. Employee-facing reads use the normal
+Supabase server/browser client and are scoped by RLS to the current user.
+Admin list/detail reads and admin mutations are performed in Next.js server
+code after `requireAdmin()`, using the server-only service-role client.
 
 ### `profiles`
 
@@ -207,15 +227,12 @@ alter table public.profiles enable row level security;
 
 create policy profiles_select_own
   on public.profiles for select to authenticated
-  using (id = auth.uid() or public.is_admin());
-
-create policy profiles_update_own_basic
-  on public.profiles for update to authenticated
-  using (id = auth.uid())
-  with check (id = auth.uid() and role = (select role from public.profiles where id = auth.uid()));
+  using (id = (select auth.uid()));
 ```
 
-Admin inserts/updates on other users go through the service-role client, bypassing RLS.
+There is currently no browser/client update policy for `profiles`. Admin
+profile reads/writes go through the service-role client after server-side admin
+verification.
 
 ### `attendance`
 
@@ -224,10 +241,12 @@ alter table public.attendance enable row level security;
 
 create policy attendance_select_own
   on public.attendance for select to authenticated
-  using (user_id = auth.uid() or public.is_admin());
+  using (user_id = (select auth.uid()));
 ```
 
-No direct insert/update from the browser — check-in/check-out goes through route handlers.
+No direct insert/update from the browser. Check-in/check-out and admin manual
+attendance writes go through route handlers that verify the user and then write
+with the service-role client.
 
 ### `leave_requests`
 
@@ -236,7 +255,7 @@ alter table public.leave_requests enable row level security;
 
 create policy leave_select_own
   on public.leave_requests for select to authenticated
-  using (user_id = auth.uid() or public.is_admin());
+  using (user_id = (select auth.uid()));
 ```
 
 ### `office_settings`
@@ -251,11 +270,33 @@ create policy office_settings_select_authenticated
 
 ### `activity_logs`
 
-RLS enabled with no browser policies — only the service-role client reads/writes, gated by admin-verified route handlers.
+RLS is enabled with no browser policies. Only the service-role client
+reads/writes logs, gated by admin-verified route handlers.
+
+## RPC functions
+
+`0003_functions.sql` defines:
+
+```sql
+create or replace function public.decrement_leave_balance(p_user_id uuid, p_days int)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  update public.profiles
+  set leave_balance = greatest(0, leave_balance - p_days)
+  where id = p_user_id;
+$$;
+```
+
+It is called from admin leave assignment/review code through the service-role
+client.
 
 ## TypeScript types
 
-Generated types land at `src/types/database.ts` via `supabase gen types typescript`. Hand-written domain types live at `src/types/index.ts`:
+There is no generated `src/types/database.ts` committed yet. Hand-written domain
+types live at `src/types/index.ts`:
 
 ```ts
 export type Role = 'employee' | 'admin';

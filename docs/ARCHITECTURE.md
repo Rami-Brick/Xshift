@@ -33,6 +33,7 @@ XshiftClaude/
   supabase/
     migrations/0001_init.sql
     migrations/0002_seed.sql
+    migrations/0003_functions.sql
   src/
     app/
       layout.tsx
@@ -67,10 +68,9 @@ XshiftClaude/
         reports/attendance.csv/
     components/
       shell/                  headers, admin drawer
-      attendance/             CheckInButton, TodayStatusCard, HistoryTable
+      attendance/             CheckInButton, TodayCard, MonthFilter
       admin/                  forms, dialogs, filter bars, map preview
-      leave/                  LeaveForm, LeaveList
-      ui/                     EmptyState, Skeleton
+      leave/                  LeavePageClient, dialogs, admin leave table
     lib/
       supabase/               browser.ts, server.ts, service.ts, middleware.ts
       attendance/             geo.ts, status.ts, format.ts
@@ -101,10 +101,10 @@ XshiftClaude/
 
 ### Route Handlers vs Server Actions
 
-- **Server Action** — forms inside the app that want `revalidatePath`: login, logout, leave submit, employee create/edit, settings save, manual attendance edit.
-- **Route Handler (`src/app/api/*`)** — client-initiated calls needing explicit JSON/HTTP: `POST /api/checkin`, `POST /api/checkout`, `GET /api/admin/stats` (SWR polls it), CSV export.
+- **Server Action** - login/logout only today.
+- **Route Handler (`src/app/api/*`)** - JSON/HTTP mutations and data endpoints: `POST /api/checkin`, `POST /api/checkout`, attendance CRUD, employee CRUD, leave CRUD, settings save, logs, admin stats, and CSV export.
 
-Role is enforced server-side in every handler. The service-role client is used **only** for admin-writing-other-users (create employee, admin-triggered password changes).
+Role is enforced server-side in every handler. The service-role client is used from server-only code after `requireAdmin()` for admin list/detail reads and admin mutations, and from check-in/check-out handlers for controlled attendance writes. It is never imported by `"use client"` files.
 
 ## Supabase clients
 
@@ -116,17 +116,25 @@ Role is enforced server-side in every handler. The service-role client is used *
 ## Data fetching
 
 - Server-side auth + role checks in layouts.
-- Server Components directly read via `createServerClient` + RLS.
-- Client components for check-in (GPS) and admin dashboard polling.
-- Admin privileged writes go through route handlers backed by the service client.
+- Employee pages read through `createServerClient` and RLS-scoped user access.
+- Admin pages read through `createServiceClient()` after `requireAdmin()` because the current RLS policies do not grant admins broad browser/client access.
+- Client components handle GPS capture, dialogs, filters, toasts, and admin dashboard polling.
+- Admin mutations go through route handlers backed by the service client.
 
 ## Auth
 
 - Email + password.
 - First admin created manually in the Supabase dashboard (see `SETUP.md`).
 - Admin creates employee accounts through `POST /api/employees` using the service client.
+- `0001_init.sql` also installs `app_private.handle_new_user()`, which auto-creates a minimal `profiles` row after every Supabase Auth user insert. The employee create route must account for that trigger when writing the final profile fields.
 - Middleware refreshes the session cookie on every request and redirects unauthenticated traffic to `/login`.
 - Layouts perform a second server-side role check as defense in depth.
+
+## Current implementation notes
+
+- Migrations and running app code are the current source of truth. These docs should describe that state, and known code issues should be fixed in code rather than documented as intended behavior.
+- The current migration set does not define a public `is_admin()` RLS helper. Admin access is enforced in Next.js server code, then performed with the service-role client.
+- `supabase/migrations/0003_functions.sql` defines `public.decrement_leave_balance(...)`, used by admin leave assignment/review.
 
 ## Route groups
 

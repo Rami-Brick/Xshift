@@ -1,0 +1,149 @@
+{
+  "app": {
+    "name": "Xshift",
+    "tagline": "Gestion des présences"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "search": "Rechercher",
+    "filters": "Filtres",
+    "export": "Exporter",
+    "back": "Retour",
+    "yes": "Oui",
+    "no": "Non",
+    "empty": "Aucun résultat",
+    "error": "Une erreur est survenue"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "invalidCredentials": "Identifiants incorrects",
+    "welcome": "Bienvenue"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "history": "Historique",
+    "leave": "Congés",
+    "employees": "Employés",
+    "attendance": "Présences",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "logs": "Journal"
+  },
+  "attendance": {
+    "checkIn": "Pointer l'arrivée",
+    "checkOut": "Pointer le départ",
+    "checkedIn": "Arrivée pointée à {time}",
+    "checkedOut": "Départ pointé à {time}",
+    "status": {
+      "present": "Présent",
+      "late": "En retard",
+      "absent": "Absent",
+      "leave": "En congé",
+      "holiday": "Jour férié",
+      "forgotCheckout": "Oubli de départ"
+    },
+    "errors": {
+      "gpsUnavailable": "GPS indisponible",
+      "permissionDenied": "Accès à la localisation refusé",
+      "accuracyTooLow": "Précision GPS insuffisante — réessayez près d'une fenêtre",
+      "outsideRadius": "Vous êtes à {distance} m du bureau (rayon autorisé : {radius} m)",
+      "alreadyCheckedIn": "Vous avez déjà pointé votre arrivée à {time}",
+      "notCheckedIn": "Vous devez pointer votre arrivée avant le départ",
+      "alreadyCheckedOut": "Vous avez déjà pointé votre départ à {time}"
+    }
+  },
+  "dashboard": {
+    "greeting": "Bonjour, {name}",
+    "today": "Aujourd'hui",
+    "monthPresent": "Jours présents ce mois",
+    "monthLate": "Retards ce mois",
+    "leaveBalance": "Solde de congés",
+    "recent": "Présences récentes"
+  },
+  "history": {
+    "title": "Historique de présence",
+    "month": "Mois",
+    "columns": {
+      "date": "Date",
+      "checkIn": "Arrivée",
+      "checkOut": "Départ",
+      "status": "Statut",
+      "lateMinutes": "Retard (min)",
+      "note": "Note"
+    }
+  },
+  "leave": {
+    "title": "Congés",
+    "balance": "Solde de congés",
+    "days": "{days} jours",
+    "assigned": "Congés assignés",
+    "type": {
+      "annual": "Annuel",
+      "sick": "Maladie",
+      "unpaid": "Sans solde",
+      "other": "Autre"
+    },
+    "status": {
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "rejected": "Refusé",
+      "cancelled": "Annulé"
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "title": "Tableau de bord",
+      "activeEmployees": "Employés actifs",
+      "presentToday": "Présents aujourd'hui",
+      "lateToday": "En retard aujourd'hui",
+      "absentToday": "Absents aujourd'hui",
+      "onLeaveToday": "En congé aujourd'hui"
+    },
+    "employees": {
+      "title": "Employés",
+      "create": "Créer un employé",
+      "fullName": "Nom complet",
+      "phone": "Téléphone",
+      "position": "Poste",
+      "department": "Département",
+      "role": "Rôle",
+      "workHours": "Heures de travail",
+      "tempPassword": "Mot de passe temporaire",
+      "deactivate": "Désactiver"
+    },
+    "settings": {
+      "title": "Paramètres",
+      "companyName": "Nom de l'entreprise",
+      "logoUrl": "URL du logo",
+      "officeName": "Nom du bureau",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "captureLocation": "Capturer ma position",
+      "radius": "Rayon autorisé (m)",
+      "accuracy": "Précision GPS maximale (m)",
+      "gracePeriod": "Période de tolérance (min)",
+      "forgotCheckoutCutoff": "Heure limite de pointage",
+      "defaultStart": "Heure de début par défaut",
+      "defaultEnd": "Heure de fin par défaut"
+    },
+    "logs": {
+      "title": "Journal d'activité",
+      "actor": "Acteur",
+      "action": "Action",
+      "target": "Cible",
+      "details": "Détails",
+      "at": "Horodatage"
+    }
+  }
+}

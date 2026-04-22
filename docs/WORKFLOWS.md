@@ -4,7 +4,7 @@
 
 1. Admin opens the Supabase dashboard and creates the first admin account (see `SETUP.md`).
 2. Admin logs into Xshift at `/login` with email + password.
-3. Admin creates employee accounts via `/admin/employees` → server creates the auth user with a temporary password chosen by the admin and inserts a `profiles` row.
+3. Admin creates employee accounts via `/admin/employees` -> server creates the auth user with a temporary password chosen by the admin, then writes the employee profile fields. Because the database auth trigger creates a minimal profile automatically, this profile write should be an update/upsert in code.
 4. Admin communicates the temporary password to the employee directly.
 5. Employee signs in at `/login`.
 6. The app fetches the profile role server-side and redirects: admin → `/admin/dashboard`, employee → `/dashboard`.
@@ -53,7 +53,7 @@ Failure toasts (all in French):
 
 ## Forgot-checkout flag
 
-A row whose `check_in_at is not null`, `check_out_at is null`, and local time has passed `office_settings.forgot_checkout_cutoff_time` is flagged `forgot_checkout = true` so it surfaces clearly in the admin attendance list. The flag is toggled on read in the admin list or via a scheduled job (future). Admin fixes the record manually with a checkout time.
+A row whose `check_in_at is not null`, `check_out_at is null`, and local time has passed `office_settings.forgot_checkout_cutoff_time` should be flagged `forgot_checkout = true` so it surfaces clearly in the admin attendance list. The current code stores and displays the field, but does not yet run an automatic daily/read-time updater. Admin can still fix records manually with a checkout time.
 
 ## Employee dashboard (`/dashboard`)
 
@@ -70,17 +70,16 @@ A row whose `check_in_at is not null`, `check_out_at is null`, and local time ha
 
 ## Employee leave (`/leave`)
 
-- Leave balance with SegmentedPercentBar visualization.
-- List of assigned/approved leave (type, période, jours, statut, motif).
-- MVP: read-only. Admin assigns.
+- Leave balance card.
+- List of leave requests/assignments (type, period, days, status, reason/admin note).
+- Employee can submit a pending leave request from the leave page; admin can assign/review leave.
 
 ## Admin dashboard (`/admin/dashboard`)
 
 - Active employee count.
 - Présents aujourd'hui / En retard / Absents / En congé.
-- Today's attendance list.
-- Recent activity (last 10 `activity_logs`).
-- DonutGauge for presence breakdown.
+- Today and month KPI cards.
+- Recent activity from `activity_logs`.
 - Client wrapper polls `GET /api/admin/stats` every 60s via SWR.
 
 ## Admin employees (`/admin/employees`)
@@ -94,7 +93,7 @@ A row whose `check_in_at is not null`, `check_out_at is null`, and local time ha
 1. Admin submits the form (nom, email, mot de passe temporaire, rôle, département, poste, heures de travail, solde de congés).
 2. Route handler `POST /api/employees` verifies admin role.
 3. Service-role client creates the Supabase auth user (`auth.admin.createUser`, `email_confirm: true`).
-4. Handler inserts/updates the `profiles` row.
+4. The database trigger creates a minimal `profiles` row, so the handler should update/upsert that row with the final employee details.
 5. Handler writes `activity_logs` action `create_employee`.
 
 ### Deactivate employee

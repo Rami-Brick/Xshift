@@ -47,7 +47,7 @@ export function SideNavRail<K extends string = string>({
             onClick={() => onChange?.(item.key)}
             className={cn(
               'inline-flex h-12 w-12 items-center justify-center rounded-full transition',
-              active ? 'bg-surface text-brand' : 'bg-navSlate text-white hover:bg-[#3a3f47]'
+              active ? 'bg-surface text-brand' : 'bg-navSlate text-white hover:bg-navSlateHover'
             )}
           >
             <Icon size={20} strokeWidth={active ? 2.25 : 2} />

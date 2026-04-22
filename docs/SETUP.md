@@ -27,8 +27,9 @@ Never commit `.env.local`. Commit only `.env.example`.
 
 Open **SQL Editor** in the Supabase dashboard and run, in order:
 
-1. `supabase/migrations/0001_init.sql` — enums, tables, indexes, triggers, RLS policies.
-2. `supabase/migrations/0002_seed.sql` — one `office_settings` row with Tunis placeholder coordinates.
+1. `supabase/migrations/0001_init.sql` - enums, tables, indexes, triggers, RLS policies.
+2. `supabase/migrations/0002_seed.sql` - one `office_settings` row with Tunis placeholder coordinates.
+3. `supabase/migrations/0003_functions.sql` - helper RPC used by leave balance updates.
 
 Verify:
 
@@ -42,18 +43,17 @@ Still in the Supabase dashboard:
 
 1. **Authentication → Users → Add user** → fill email + a strong password. Set "Auto-confirm user" to true.
 2. Copy the new user's `id` (UUID).
-3. **SQL Editor**:
+3. **SQL Editor**. `0001_init.sql` creates a minimal profile automatically, so update it instead of inserting a duplicate row:
 
 ```sql
-insert into public.profiles (id, full_name, email, role, leave_balance, is_active)
-values (
-  '<paste-uuid-here>',
-  'Admin Xshift',
-  '<same-email-here>',
-  'admin',
-  0,
-  true
-);
+update public.profiles
+set
+  full_name = 'Admin Xshift',
+  email = '<same-email-here>',
+  role = 'admin',
+  leave_balance = 0,
+  is_active = true
+where id = '<paste-uuid-here>';
 ```
 
 You should now be able to log into the app at `/login` with that admin account and access `/admin/*`.

@@ -37,13 +37,20 @@ Vertical slices following `IMPLEMENTATION_PLAN.md`. Ship each phase with `npm ru
 ## Implementation rules
 
 - Service-role Supabase code stays server-only. Never imported from a `"use client"` file.
-- RLS is enabled on every public table. Admin writes on other users bypass RLS through the service client inside route handlers.
+- RLS is enabled on every public table. Employee-facing reads are scoped to the current user by RLS. Admin reads/writes happen in Next.js server code after `requireAdmin()`, using the server-only service client.
 - Never trust `auth.users.raw_user_meta_data` for authorization. Read `profiles.role` instead.
 - Role is checked in both the middleware and in layouts as defense in depth.
 - All UI text is French and lives in `messages/fr.json`. No hardcoded strings in components.
 - Use design-kit components and semantic Tailwind classes. No raw hex values in app code.
 - Every admin mutation writes an `activity_logs` row.
 - Mutations that change aggregate state (leave balance, settings) run through route handlers, not direct Supabase writes from the browser.
+
+## Known implementation issues to fix
+
+- `POST /api/employees` currently inserts into `profiles` after `auth.admin.createUser()`, but `app_private.handle_new_user()` already creates a minimal profile row. Change the route to update/upsert the profile row.
+- `POST /api/checkin` selects `grace_period_minutes` from `profiles`, but that column exists on `office_settings`, not `profiles`.
+- `forgot_checkout` is stored and displayed, but no scheduled/read-time process currently flips it to `true`.
+- `public.decrement_leave_balance(...)` is a `security definer` function in the exposed `public` schema. It is currently called through the service client, but should be reviewed before production hardening.
 
 ## Suggested first coding task
 

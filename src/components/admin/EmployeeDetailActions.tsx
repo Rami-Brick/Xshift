@@ -1,0 +1,79 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Pencil, UserX } from 'lucide-react';
+import { toast } from 'sonner';
+import { EmployeeFormDialog } from './EmployeeFormDialog';
+import type { Profile } from '@/types';
+
+interface Props {
+  employee: Profile;
+}
+
+export function EmployeeDetailActions({ employee }: Props) {
+  const [showEdit, setShowEdit] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const router = useRouter();
+
+  async function handleDeactivate() {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    const res = await fetch(`/api/employees/${employee.id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (!res.ok) {
+      toast.error(json.error ?? 'Erreur lors de la désactivation');
+      setConfirming(false);
+      return;
+    }
+    toast.success('Employé désactivé');
+    router.push('/admin/employees');
+    router.refresh();
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function handleUpdated(_profile: Profile) {
+    setShowEdit(false);
+    router.refresh();
+    toast.success('Employé mis à jour');
+  }
+
+  return (
+    <>
+      <div className="flex gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => setShowEdit(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface shadow-softer text-sm font-medium text-ink hover:bg-soft transition"
+        >
+          <Pencil size={14} />
+          Modifier
+        </button>
+        {employee.is_active && (
+          <button
+            type="button"
+            onClick={handleDeactivate}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition ${
+              confirming
+                ? 'bg-trend-down text-white'
+                : 'bg-surface shadow-softer text-trend-down hover:bg-trend-down/10'
+            }`}
+          >
+            <UserX size={14} />
+            {confirming ? 'Confirmer ?' : 'Désactiver'}
+          </button>
+        )}
+      </div>
+
+      {showEdit && (
+        <EmployeeFormDialog
+          employee={employee}
+          onClose={() => setShowEdit(false)}
+          onSuccess={handleUpdated}
+        />
+      )}
+    </>
+  );
+}
