@@ -166,7 +166,7 @@ activity_action:  'checkin' | 'checkout' | 'create_employee' | 'update_employee'
 | `role` | user_role DEFAULT 'employee' | |
 | `work_start_time` | time NOT NULL DEFAULT '08:30' | Per-employee schedule |
 | `work_end_time` | time NOT NULL DEFAULT '17:30' | |
-| `leave_balance` | int NOT NULL DEFAULT 0 CHECK >= 0 | Days remaining |
+| `leave_balance` | numeric(6,2) NOT NULL DEFAULT 0 CHECK >= 0 | Days remaining |
 | `is_active` | boolean NOT NULL DEFAULT true | Soft-delete flag |
 | `avatar_url` | text | |
 | `created_at` | timestamptz DEFAULT now() | |
@@ -185,7 +185,7 @@ activity_action:  'checkin' | 'checkout' | 'create_employee' | 'update_employee'
 | `date` | date NOT NULL | Local date in Africa/Tunis |
 | `check_in_at` | timestamptz | UTC timestamp |
 | `check_out_at` | timestamptz | CHECK >= check_in_at |
-| `status` | attendance_status NOT NULL DEFAULT 'absent' | |
+| `status` | attendance_status NOT NULL DEFAULT 'present' | |
 | `late_minutes` | int NOT NULL DEFAULT 0 CHECK >= 0 | |
 | `forgot_checkout` | boolean NOT NULL DEFAULT false | Precomputed flag |
 | `check_in_latitude` | float8 | |
@@ -194,8 +194,8 @@ activity_action:  'checkin' | 'checkout' | 'create_employee' | 'update_employee'
 | `check_out_latitude` | float8 | |
 | `check_out_longitude` | float8 | |
 | `check_out_accuracy_meters` | float8 CHECK >= 0 | |
-| `check_in_distance_meters` | float8 CHECK >= 0 | Meters from office |
-| `check_out_distance_meters` | float8 CHECK >= 0 | |
+| `check_in_distance_meters` | integer CHECK >= 0 | Meters from office |
+| `check_out_distance_meters` | integer CHECK >= 0 | |
 | `note` | text | Admin note |
 | `created_by` | uuid FK → profiles | NULL = system/employee self |
 | `updated_by` | uuid FK → profiles | |
@@ -223,7 +223,7 @@ activity_action:  'checkin' | 'checkout' | 'create_employee' | 'update_employee'
 | `requested_by` | uuid FK → profiles | NULL = self-submitted |
 | `reviewed_by` | uuid FK → profiles | Admin who acted |
 | `reviewed_at` | timestamptz | |
-| `deduct_balance` | boolean NOT NULL DEFAULT false | Whether to subtract leave_balance |
+| `deduct_balance` | boolean NOT NULL DEFAULT true | Whether to subtract leave_balance |
 | `created_at` | timestamptz DEFAULT now() | |
 | `updated_at` | timestamptz DEFAULT now() | |
 
@@ -926,8 +926,14 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 4. Auth → Users → Add user (admin email + temp password)
 5. SQL Editor:
    ```sql
-   insert into public.profiles (id, full_name, email, role)
-   values ('<uuid-from-auth>', 'Admin Name', 'admin@company.tn', 'admin');
+   update public.profiles
+   set
+     full_name = 'Admin Name',
+     email = 'admin@company.tn',
+     role = 'admin',
+     leave_balance = 0,
+     is_active = true
+   where id = '<uuid-from-auth>';
    ```
 6. Update office coordinates via Admin Settings page after first login
 
@@ -947,13 +953,13 @@ vercel deploy --prod
 
 ## 14. Current Build Status
 
-**`npm run build` → ✅ Zero errors, zero warnings**
+**`npm run build` → not verified in the current workspace. Multiple `next dev`/`next build` processes were active and the build command timed out; rerun from a clean process state before marking production build green.**
 
-**`npm run lint` → ✅ No ESLint warnings or errors**
+**`npm run lint` → passed**
 
-**`npx tsc --noEmit` → ✅ Zero type errors**
+**`npm run typecheck` → passed**
 
-Last verified: 2026-04-22 after bug-fix pass (employee creation upsert, check-in grace_period_minutes source, decrement_leave_balance privilege hardening).
+Last verified: 2026-04-22 after bug-fix pass (employee creation upsert, check-in grace_period_minutes source, decrement_leave_balance privilege hardening, leave RPC error handling).
 
 ### All Routes (28 total)
 
@@ -1058,7 +1064,7 @@ The design-kit `SelectPill` renders options where `value === display text`. For 
 
 ### 6. `decrement_leave_balance` RPC — Must Exist and Privileges Are Locked
 
-The leave approval flow calls `service.rpc('decrement_leave_balance', ...)`. If `0003_functions.sql` hasn't been run, approval with `deduct_balance=true` silently fails.
+The leave approval flow calls `service.rpc('decrement_leave_balance', ...)`. If `0003_functions.sql` has not been run, approval/assignment with `deduct_balance=true` returns an API error after the leave row has already been written.
 
 The function intentionally lives in the `public` schema (required for Supabase `.rpc()` calls) but has `EXECUTE` revoked from `public`, `anon`, and `authenticated`. Only `service_role` can invoke it. This means no client-side JWT — even an authenticated admin — can call it directly; it only runs through the server-side service client.
 

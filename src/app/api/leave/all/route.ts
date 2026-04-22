@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       end: parseISO(end_date),
     });
 
-    await service
+    const { error: attendanceError } = await service
       .from('attendance')
       .upsert(
         days.map((d) => ({
@@ -99,11 +99,25 @@ export async function POST(request: NextRequest) {
         { onConflict: 'user_id,date' },
       );
 
+    if (attendanceError) {
+      return NextResponse.json(
+        { error: 'Congé créé, mais erreur lors de la création des présences' },
+        { status: 500 },
+      );
+    }
+
     if (deduct_balance) {
-      await service.rpc('decrement_leave_balance', {
+      const { error: balanceError } = await service.rpc('decrement_leave_balance', {
         p_user_id: user_id,
         p_days: days.length,
-      }).then(() => null);
+      });
+
+      if (balanceError) {
+        return NextResponse.json(
+          { error: 'Congé créé, mais erreur lors de la déduction du solde' },
+          { status: 500 },
+        );
+      }
     }
   }
 

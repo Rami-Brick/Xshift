@@ -66,15 +66,29 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       updated_by: actorId,
     }));
 
-    await service
+    const { error: attendanceError } = await service
       .from('attendance')
       .upsert(attendanceRows, { onConflict: 'user_id,date' });
 
+    if (attendanceError) {
+      return NextResponse.json(
+        { error: 'Congé mis à jour, mais erreur lors de la création des présences' },
+        { status: 500 },
+      );
+    }
+
     if (deduct_balance) {
-      await service.rpc('decrement_leave_balance', {
+      const { error: balanceError } = await service.rpc('decrement_leave_balance', {
         p_user_id: leave.user_id,
         p_days: days.length,
-      }).then(() => null);
+      });
+
+      if (balanceError) {
+        return NextResponse.json(
+          { error: 'Congé mis à jour, mais erreur lors de la déduction du solde' },
+          { status: 500 },
+        );
+      }
     }
   }
 
