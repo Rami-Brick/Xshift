@@ -5,7 +5,7 @@ import { updateEmployeeSchema } from '@/lib/validation/employee';
 import { logActivity } from '@/lib/activity/log';
 
 const PROFILE_SELECT =
-  'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, is_active, avatar_url, created_at, updated_at';
+  'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -82,6 +82,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     targetUserId: id,
     details: { before, after: updates },
   });
+
+  if (
+    updates.default_day_off !== undefined &&
+    updates.default_day_off !== before.default_day_off
+  ) {
+    await logActivity({
+      actorId,
+      action: 'update_default_day_off',
+      targetUserId: id,
+      details: { from: before.default_day_off, to: updates.default_day_off },
+    });
+  }
 
   return NextResponse.json(data);
 }

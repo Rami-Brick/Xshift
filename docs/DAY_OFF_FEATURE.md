@@ -158,9 +158,9 @@ create type public.day_of_week as enum (
 
 | Column | Type | Notes |
 |---|---|---|
-| `default_day_off` | `day_of_week NOT NULL DEFAULT 'sunday'` | Recurring weekly day off. New employees default to Sunday (Tunisia norm). |
+| `default_day_off` | `day_of_week NOT NULL DEFAULT 'saturday'` | Recurring weekly day off. New employees default to Saturday. |
 
-Existing rows get back-filled to `'sunday'` automatically by the default.
+Existing rows get back-filled to `'saturday'` automatically by the default.
 
 ### 5.3 Enum: `public.day_off_change_status`
 
@@ -279,7 +279,7 @@ alter type public.activity_action add value if not exists 'update_default_day_of
 
 -- 3. profiles.default_day_off (defaulted, NOT NULL, back-fills existing rows automatically)
 alter table public.profiles
-  add column if not exists default_day_off public.day_of_week not null default 'sunday';
+  add column if not exists default_day_off public.day_of_week not null default 'saturday';
 
 -- 4. day_off_changes table
 create table public.day_off_changes (
@@ -734,6 +734,7 @@ Add to `messages/fr.json` (or wherever day-off labels live — if strings are in
 | T1 | Admin | Run migration 0004 | Migration succeeds; existing employees have `default_day_off = 'sunday'`. |
 | T2 | Admin | Create employee with `default_day_off='friday'` | Profile row has `'friday'`; activity log entry. |
 | T3 | Employee | Open `/day-off` on a non-Friday | Sees "Vendredi" as this-week and next-week effective day. |
+| T3b | Existing employee (pre-migration) | Open `/day-off` | Default shows "Samedi" (migration back-fill). |
 | T4 | Employee | Submit change: next week, Wednesday | Row in `day_off_changes` with status `pending`, `old_day='friday'`, `new_day='wednesday'`. Dashboard badge +1 for admin. |
 | T5 | Admin | Approve | Attendance row inserted for next Wednesday with `status='day_off'`. Employee dashboard for that day blocks check-in. |
 | T6 | Employee | Try to check in on that Wednesday | 422 `day_off`. |

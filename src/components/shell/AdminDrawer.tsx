@@ -5,18 +5,27 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Menu, X, LayoutDashboard, Users, Clock,
-  CalendarDays, BarChart2, Settings, ScrollText, LogOut,
+  CalendarDays, CalendarOff, BarChart2, Settings, ScrollText, LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { logout } from '@/lib/auth/actions';
 
-type NavKey = 'dashboard' | 'employees' | 'attendance' | 'leave' | 'reports' | 'settings' | 'logs';
+type NavKey =
+  | 'dashboard'
+  | 'employees'
+  | 'attendance'
+  | 'leave'
+  | 'day-off'
+  | 'reports'
+  | 'settings'
+  | 'logs';
 
 const NAV_ITEMS: { key: NavKey; icon: React.ElementType; label: string }[] = [
   { key: 'dashboard',  icon: LayoutDashboard, label: 'Tableau de bord' },
   { key: 'employees',  icon: Users,           label: 'Employés' },
   { key: 'attendance', icon: Clock,           label: 'Présences' },
   { key: 'leave',      icon: CalendarDays,    label: 'Congés' },
+  { key: 'day-off',    icon: CalendarOff,     label: 'Jours de repos' },
   { key: 'reports',    icon: BarChart2,        label: 'Rapports' },
   { key: 'settings',   icon: Settings,         label: 'Paramètres' },
   { key: 'logs',       icon: ScrollText,       label: 'Journal' },
@@ -27,6 +36,7 @@ const KEY_TO_PATH: Record<NavKey, string> = {
   employees:  '/admin/employees',
   attendance: '/admin/attendance',
   leave:      '/admin/leave',
+  'day-off':  '/admin/day-off',
   reports:    '/admin/reports',
   settings:   '/admin/settings',
   logs:       '/admin/logs',

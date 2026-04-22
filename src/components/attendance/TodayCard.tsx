@@ -14,6 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
   absent: 'Absent',
   leave: 'En congé',
   holiday: 'Jour férié',
+  day_off: 'Jour de repos',
 };
 
 const STATUS_TONE: Record<string, 'lime' | 'trendDown' | 'neutral'> = {
@@ -22,14 +23,16 @@ const STATUS_TONE: Record<string, 'lime' | 'trendDown' | 'neutral'> = {
   absent: 'trendDown',
   leave: 'neutral',
   holiday: 'neutral',
+  day_off: 'neutral',
 };
 
 interface TodayCardProps {
   initialToday: Attendance | null;
   gracePeriodMinutes: number;
+  isDayOff?: boolean;
 }
 
-export function TodayCard({ initialToday, gracePeriodMinutes }: TodayCardProps) {
+export function TodayCard({ initialToday, gracePeriodMinutes, isDayOff = false }: TodayCardProps) {
   const [today, setToday] = useState<Attendance | null>(initialToday);
 
   async function refresh() {
@@ -98,7 +101,16 @@ export function TodayCard({ initialToday, gracePeriodMinutes }: TodayCardProps) 
         </div>
       </div>
 
-      <CheckInButton today={today} onSuccess={refresh} />
+      {isDayOff ? (
+        <div className="bg-canvas rounded-xl p-4 text-center">
+          <p className="text-cardTitle font-bold text-ink">Jour de repos</p>
+          <p className="text-caption text-muted mt-1">
+            Pas de pointage nécessaire aujourd&apos;hui.
+          </p>
+        </div>
+      ) : (
+        <CheckInButton today={today} onSuccess={refresh} />
+      )}
     </Card>
   );
 }

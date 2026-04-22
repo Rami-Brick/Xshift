@@ -43,6 +43,7 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
           work_end_time: employee.work_end_time.slice(0, 5),
           leave_balance: employee.leave_balance,
           role: employee.role,
+          default_day_off: employee.default_day_off,
           is_active: employee.is_active,
         }
       : {
@@ -50,6 +51,7 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
           work_end_time: '17:30',
           leave_balance: 0,
           role: 'employee',
+          default_day_off: 'saturday',
         },
   });
 
@@ -145,6 +147,18 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
               <input {...register('work_end_time')} type="time" className={inputCls} />
             </Field>
           </div>
+
+          <Field label="Jour de repos par défaut" error={errors.default_day_off?.message}>
+            <select {...register('default_day_off')} className={inputCls}>
+              <option value="monday">Lundi</option>
+              <option value="tuesday">Mardi</option>
+              <option value="wednesday">Mercredi</option>
+              <option value="thursday">Jeudi</option>
+              <option value="friday">Vendredi</option>
+              <option value="saturday">Samedi</option>
+              <option value="sunday">Dimanche</option>
+            </select>
+          </Field>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Solde congés (j)" error={errors.leave_balance?.message}>

@@ -1,10 +1,21 @@
 export type Role = 'employee' | 'admin';
 
-export type AttendanceStatus = 'present' | 'late' | 'absent' | 'leave' | 'holiday';
+export type AttendanceStatus = 'present' | 'late' | 'absent' | 'leave' | 'holiday' | 'day_off';
 
 export type LeaveType = 'annual' | 'sick' | 'unpaid' | 'other';
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export type DayOfWeek =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+export type DayOffChangeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export type ActivityAction =
   | 'checkin'
@@ -23,7 +34,15 @@ export type ActivityAction =
   | 'update_leave'
   | 'delete_leave'
   | 'update_settings'
-  | 'login';
+  | 'login'
+  | 'request_day_off_change'
+  | 'approve_day_off_change'
+  | 'reject_day_off_change'
+  | 'cancel_day_off_change'
+  | 'assign_day_off_change'
+  | 'update_day_off_change'
+  | 'delete_day_off_change'
+  | 'update_default_day_off';
 
 export interface Profile {
   id: string;
@@ -36,6 +55,7 @@ export interface Profile {
   work_start_time: string;
   work_end_time: string;
   leave_balance: number;
+  default_day_off: DayOfWeek;
   is_active: boolean;
   avatar_url: string | null;
   created_at: string;
@@ -152,6 +172,7 @@ export interface AdminStats {
   today: { present: number; late: number; absent: number; leave: number };
   month: { present: number; late: number; absent: number };
   pending_leave: number;
+  pending_day_off_changes: number;
   recent_activity: Array<{
     id: string;
     action: string;
@@ -159,3 +180,38 @@ export interface AdminStats {
     actor: { full_name: string } | null;
   }>;
 }
+
+export interface DayOffChange {
+  id: string;
+  user_id: string;
+  iso_year: number;
+  iso_week: number;
+  old_day: DayOfWeek;
+  new_day: DayOfWeek;
+  status: DayOffChangeStatus;
+  reason: string | null;
+  admin_note: string | null;
+  requested_by: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles?: Profile;
+}
+
+export type DayOffChangeListItem = Pick<
+  DayOffChange,
+  | 'id'
+  | 'user_id'
+  | 'iso_year'
+  | 'iso_week'
+  | 'old_day'
+  | 'new_day'
+  | 'status'
+  | 'reason'
+  | 'admin_note'
+  | 'created_at'
+  | 'updated_at'
+> & {
+  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
+};

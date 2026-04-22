@@ -1,5 +1,6 @@
 import { requireUserCached } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { timeAsync } from '@/lib/perf/timing';
 import { TodayCard } from '@/components/attendance/TodayCard';
 import { KpiCard } from '@/design-kit/compounds/KpiCard';
@@ -8,7 +9,12 @@ import { todayDateInOffice } from '@/lib/utils/date';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarDays, Clock, Palmtree } from 'lucide-react';
-import type { Attendance } from '@/types';
+import {
+  dayOfWeekEnum,
+  effectiveDayOff,
+  isoWeekForNow,
+} from '@/lib/day-off/weeks';
+import type { Attendance, DayOfWeek } from '@/types';
 
 const STATUS_LABEL: Record<string, string> = {
   present: 'Présent',
@@ -16,6 +22,7 @@ const STATUS_LABEL: Record<string, string> = {
   absent: 'Absent',
   leave: 'En congé',
   holiday: 'Jour férié',
+  day_off: 'Jour de repos',
 };
 
 export default async function DashboardPage() {
@@ -57,6 +64,25 @@ export default async function DashboardPage() {
 
   const firstName = profile.full_name.split(' ')[0];
 
+  // Is today the effective day off for this employee?
+  const week = isoWeekForNow();
+  const service = createServiceClient();
+  const { data: overrides } = await service
+    .from('day_off_changes')
+    .select('iso_year, iso_week, new_day, status')
+    .eq('user_id', profile.id)
+    .eq('iso_year', week.iso_year)
+    .eq('iso_week', week.iso_week)
+    .eq('status', 'approved');
+
+  const effective = effectiveDayOff(
+    profile.default_day_off as DayOfWeek,
+    overrides ?? [],
+    week.iso_year,
+    week.iso_week,
+  );
+  const isDayOff = effective === dayOfWeekEnum(now);
+
   return (
     <div className="space-y-5 px-4 pt-5 pb-2">
       {/* Greeting */}
@@ -69,7 +95,11 @@ export default async function DashboardPage() {
       </div>
 
       {/* Today check-in card */}
-      <TodayCard initialToday={todayRecord as Attendance | null} gracePeriodMinutes={settings?.grace_period_minutes ?? 10} />
+      <TodayCard
+        initialToday={todayRecord as Attendance | null}
+        gracePeriodMinutes={settings?.grace_period_minutes ?? 10}
+        isDayOff={isDayOff}
+      />
 
       {/* KPI row */}
       <div className="grid grid-cols-3 gap-3">

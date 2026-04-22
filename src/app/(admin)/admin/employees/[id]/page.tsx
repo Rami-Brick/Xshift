@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
   absent: 'Absent',
   leave: 'En congé',
   holiday: 'Jour férié',
+  day_off: 'Jour de repos',
 };
 
 function statusChip(status: string): 'lime' | 'trendDown' | 'neutral' {

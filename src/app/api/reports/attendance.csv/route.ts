@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
     absent: 'Absent',
     leave: 'En congé',
     holiday: 'Jour férié',
+    day_off: 'Jour de repos',
   };
 
   const headers = ['Date', 'Employé', 'Email', 'Arrivée', 'Départ', 'Statut', 'Retard (min)', 'Oubli départ'];

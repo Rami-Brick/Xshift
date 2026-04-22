@@ -20,9 +20,18 @@ const ACTION_LABEL: Record<string, string> = {
   reject_leave: 'Congé refusé',
   cancel_leave: 'Congé annulé',
   assign_leave: 'Congé assigné',
+  update_leave: 'Congé modifié',
   delete_leave: 'Congé supprimé',
   update_settings: 'Paramètres mis à jour',
   login: 'Connexion',
+  request_day_off_change: 'Changement de repos demandé',
+  approve_day_off_change: 'Changement de repos approuvé',
+  reject_day_off_change: 'Changement de repos refusé',
+  cancel_day_off_change: 'Changement de repos annulé',
+  assign_day_off_change: 'Changement de repos assigné',
+  update_day_off_change: 'Changement de repos modifié',
+  delete_day_off_change: 'Changement de repos supprimé',
+  update_default_day_off: 'Jour de repos par défaut modifié',
 };
 
 interface LogEntry {

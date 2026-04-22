@@ -41,6 +41,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       { count: monthLate },
       { count: monthAbsent },
       { count: pendingLeave },
+      { count: pendingDayOffChanges },
       { data: recentActivity },
     ] = await Promise.all([
       service.from('profiles').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('role', 'employee'),
@@ -52,6 +53,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       attendanceCount('month', ['late']),
       attendanceCount('month', ['absent']),
       service.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      service.from('day_off_changes').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       service
         .from('activity_logs')
         .select('id, action, created_at, actor:profiles!activity_logs_actor_id_fkey(full_name)')
@@ -84,6 +86,7 @@ export async function getAdminStats(): Promise<AdminStats> {
         absent: monthAbsent ?? 0,
       },
       pending_leave: pendingLeave ?? 0,
+      pending_day_off_changes: pendingDayOffChanges ?? 0,
       recent_activity: activity,
     };
   });

@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { Users, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { Users, Clock, Calendar, AlertCircle, CalendarOff } from 'lucide-react';
 import { KpiCard } from '@/design-kit/compounds/KpiCard';
 import { formatInTimeZone } from 'date-fns-tz';
 import type { AdminStats } from '@/types';
@@ -22,8 +22,18 @@ const ACTION_LABEL: Record<string, string> = {
   reject_leave: 'Congé refusé',
   cancel_leave: 'Congé annulé',
   assign_leave: 'Congé assigné',
+  update_leave: 'Congé modifié',
+  delete_leave: 'Congé supprimé',
   update_settings: 'Paramètres mis à jour',
   login: 'Connexion',
+  request_day_off_change: 'Changement de repos demandé',
+  approve_day_off_change: 'Changement de repos approuvé',
+  reject_day_off_change: 'Changement de repos refusé',
+  cancel_day_off_change: 'Changement de repos annulé',
+  assign_day_off_change: 'Changement de repos assigné',
+  update_day_off_change: 'Changement de repos modifié',
+  delete_day_off_change: 'Changement de repos supprimé',
+  update_default_day_off: 'Jour de repos par défaut modifié',
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -70,6 +80,14 @@ export function AdminDashboardClient({ initialStats }: { initialStats: AdminStat
             title="Congés en attente"
             value={currentStats.pending_leave}
             icon={Calendar}
+            iconBg="dark"
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+          <KpiCard
+            title="Changements de repos"
+            value={currentStats.pending_day_off_changes}
+            icon={CalendarOff}
             iconBg="dark"
           />
         </div>

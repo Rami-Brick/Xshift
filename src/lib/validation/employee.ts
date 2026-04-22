@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dayOfWeekSchema } from '@/lib/validation/day-off';
 
 export const createEmployeeSchema = z.object({
   full_name: z.string().min(2, 'Nom requis (min. 2 caractères)'),
@@ -19,6 +20,7 @@ export const createEmployeeSchema = z.object({
     .optional(),
   leave_balance: z.coerce.number().min(0).max(365).optional(),
   role: z.enum(['employee', 'admin']).optional(),
+  default_day_off: dayOfWeekSchema.optional(),
 });
 
 export const updateEmployeeSchema = z.object({
@@ -39,6 +41,7 @@ export const updateEmployeeSchema = z.object({
   leave_balance: z.coerce.number().min(0).max(365).optional(),
   role: z.enum(['employee', 'admin']).optional(),
   is_active: z.boolean().optional(),
+  default_day_off: dayOfWeekSchema.optional(),
 });
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;

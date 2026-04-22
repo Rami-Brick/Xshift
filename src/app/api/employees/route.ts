@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   let query = service
     .from('profiles')
     .select(
-      'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, is_active, avatar_url, created_at, updated_at',
+      'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
     )
     .order('full_name', { ascending: true });
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { email, password, full_name, phone, position, department, work_start_time, work_end_time, leave_balance, role } = parsed.data;
+  const { email, password, full_name, phone, position, department, work_start_time, work_end_time, leave_balance, role, default_day_off } = parsed.data;
 
   const service = createServiceClient();
 
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
     work_start_time: work_start_time ?? settings?.default_work_start_time ?? '08:30',
     work_end_time: work_end_time ?? settings?.default_work_end_time ?? '17:30',
     leave_balance: leave_balance ?? 0,
+    default_day_off: default_day_off ?? 'saturday',
     is_active: true,
   }, { onConflict: 'id' });
 
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
   const { data: newProfile } = await service
     .from('profiles')
     .select(
-      'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, is_active, avatar_url, created_at, updated_at',
+      'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
     )
     .eq('id', authUser.user.id)
     .single();

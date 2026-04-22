@@ -5,6 +5,12 @@ import { haversineDistance } from '@/lib/attendance/geo';
 import { calcLateMinutes, resolveStatus } from '@/lib/attendance/status';
 import { logActivity } from '@/lib/activity/log';
 import { todayDateInOffice } from '@/lib/utils/date';
+import {
+  dayOfWeekEnum,
+  effectiveDayOff,
+  isoWeekForNow,
+} from '@/lib/day-off/weeks';
+import type { DayOfWeek } from '@/types';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -32,14 +38,27 @@ export async function POST(request: NextRequest) {
 
   const service = createServiceClient();
 
-  const [{ data: settings }, { data: profile }] = await Promise.all([
+  const week = isoWeekForNow();
+
+  const [{ data: settings }, { data: profile }, { data: overrides }] = await Promise.all([
     service
       .from('office_settings')
       .select(
         'office_latitude, office_longitude, allowed_radius_meters, gps_accuracy_limit_meters, grace_period_minutes',
       )
       .single(),
-    service.from('profiles').select('work_start_time').eq('id', user.id).single(),
+    service
+      .from('profiles')
+      .select('work_start_time, default_day_off')
+      .eq('id', user.id)
+      .single(),
+    service
+      .from('day_off_changes')
+      .select('iso_year, iso_week, new_day, status')
+      .eq('user_id', user.id)
+      .eq('iso_year', week.iso_year)
+      .eq('iso_week', week.iso_week)
+      .eq('status', 'approved'),
   ]);
 
   if (!settings) {
@@ -47,6 +66,22 @@ export async function POST(request: NextRequest) {
   }
   if (!profile) {
     return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
+  }
+
+  const effective = effectiveDayOff(
+    profile.default_day_off as DayOfWeek,
+    overrides ?? [],
+    week.iso_year,
+    week.iso_week,
+  );
+  if (effective === dayOfWeekEnum(new Date())) {
+    return NextResponse.json(
+      {
+        code: 'day_off',
+        error: "Aujourd'hui est votre jour de repos — pas de pointage nécessaire",
+      },
+      { status: 422 },
+    );
   }
 
   if (accuracy > settings.gps_accuracy_limit_meters) {

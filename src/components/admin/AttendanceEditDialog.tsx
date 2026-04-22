@@ -21,7 +21,7 @@ interface Props {
 type FormData = {
   user_id: string;
   date: string;
-  status: 'present' | 'late' | 'absent' | 'leave' | 'holiday';
+  status: 'present' | 'late' | 'absent' | 'leave' | 'holiday' | 'day_off';
   check_in_at: string;
   check_out_at: string;
   late_minutes: number;
@@ -167,6 +167,7 @@ export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, on
               <option value="absent">Absent</option>
               <option value="leave">En congé</option>
               <option value="holiday">Jour férié</option>
+              <option value="day_off">Jour de repos</option>
             </select>
           </Field>
 
