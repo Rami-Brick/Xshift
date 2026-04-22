@@ -14,7 +14,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('leave_requests')
-    .select('*')
+    .select('id, user_id, start_date, end_date, type, status, reason, admin_note, created_at, updated_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       requested_by: user.id,
     })
-    .select()
+    .select('id, user_id, start_date, end_date, type, status, reason, admin_note, created_at, updated_at')
     .single();
 
   if (error) {

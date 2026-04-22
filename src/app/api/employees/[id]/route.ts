@@ -4,6 +4,9 @@ import { requireAdmin } from '@/lib/auth/guards';
 import { updateEmployeeSchema } from '@/lib/validation/employee';
 import { logActivity } from '@/lib/activity/log';
 
+const PROFILE_SELECT =
+  'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, is_active, avatar_url, created_at, updated_at';
+
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -13,7 +16,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const service = createServiceClient();
 
-  const { data, error } = await service.from('profiles').select('*').eq('id', id).single();
+  const { data, error } = await service.from('profiles').select(PROFILE_SELECT).eq('id', id).single();
 
   if (error || !data) {
     return NextResponse.json({ error: 'Employé introuvable' }, { status: 404 });
@@ -55,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const { data: before } = await service.from('profiles').select('*').eq('id', id).single();
+  const { data: before } = await service.from('profiles').select(PROFILE_SELECT).eq('id', id).single();
 
   if (!before) {
     return NextResponse.json({ error: 'Employé introuvable' }, { status: 404 });
@@ -65,7 +68,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     .from('profiles')
     .update(updates)
     .eq('id', id)
-    .select()
+    .select(PROFILE_SELECT)
     .single();
 
   if (error) {

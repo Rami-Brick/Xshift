@@ -38,7 +38,13 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
   const monthEnd = formatInTimeZone(endOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
 
   const [{ data: profile }, { data: monthRecords }, { data: recent }] = await timeAsync('page.admin.employee.detail.data', () => Promise.all([
-    service.from('profiles').select('*').eq('id', id).single(),
+    service
+      .from('profiles')
+      .select(
+        'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, is_active, avatar_url, created_at, updated_at',
+      )
+      .eq('id', id)
+      .single(),
     service
       .from('attendance')
       .select('status, late_minutes')
@@ -47,7 +53,7 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
       .lte('date', monthEnd),
     service
       .from('attendance')
-      .select('*')
+      .select('id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout')
       .eq('user_id', id)
       .order('date', { ascending: false })
       .limit(10),

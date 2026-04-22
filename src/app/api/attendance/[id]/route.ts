@@ -23,7 +23,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const { data: before } = await service.from('attendance').select('*').eq('id', id).single();
+  const { data: before } = await service
+    .from('attendance')
+    .select('id, user_id, date, check_in_at, check_out_at, status, late_minutes, note')
+    .eq('id', id)
+    .single();
   if (!before) {
     return NextResponse.json({ error: 'Entrée introuvable' }, { status: 404 });
   }
@@ -32,7 +36,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     .from('attendance')
     .update({ ...parsed.data, updated_by: actorId })
     .eq('id', id)
-    .select('*, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)')
+    .select(
+      'id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout, note, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)',
+    )
     .single();
 
   if (error) {
@@ -54,7 +60,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const service = createServiceClient();
 
-  const { data: row } = await service.from('attendance').select('*').eq('id', id).single();
+  const { data: row } = await service.from('attendance').select('user_id, date, status').eq('id', id).single();
   if (!row) {
     return NextResponse.json({ error: 'Entrée introuvable' }, { status: 404 });
   }

@@ -5,6 +5,9 @@ import { reviewLeaveSchema } from '@/lib/validation/leave';
 import { logActivity } from '@/lib/activity/log';
 import { eachDayOfInterval, parseISO } from 'date-fns';
 
+const LEAVE_SELECT =
+  'id, user_id, start_date, end_date, type, status, reason, admin_note, deduct_balance, created_at, updated_at, profiles!leave_requests_user_id_fkey(id, full_name, email)';
+
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -26,7 +29,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const { status, admin_note, deduct_balance } = parsed.data;
 
-  const { data: leave } = await service.from('leave_requests').select('*').eq('id', id).single();
+  const { data: leave } = await service
+    .from('leave_requests')
+    .select('id, user_id, start_date, end_date')
+    .eq('id', id)
+    .single();
 
   if (!leave) {
     return NextResponse.json({ error: 'Demande introuvable' }, { status: 404 });
@@ -42,7 +49,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       reviewed_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select()
+    .select(LEAVE_SELECT)
     .single();
 
   if (error) {
@@ -108,7 +115,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const service = createServiceClient();
 
-  const { data: leave } = await service.from('leave_requests').select('*').eq('id', id).single();
+  const { data: leave } = await service.from('leave_requests').select('user_id').eq('id', id).single();
   if (!leave) {
     return NextResponse.json({ error: 'Demande introuvable' }, { status: 404 });
   }

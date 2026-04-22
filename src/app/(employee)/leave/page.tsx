@@ -11,7 +11,7 @@ export default async function LeavePage() {
   const { data } = await timeAsync('page.employee.leave.data', () =>
     supabase
       .from('leave_requests')
-      .select('*')
+      .select('id, user_id, start_date, end_date, type, status, reason, admin_note, created_at, updated_at')
       .eq('user_id', profile.id)
       .order('created_at', { ascending: false }),
   );

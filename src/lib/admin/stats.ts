@@ -17,16 +17,40 @@ export async function getAdminStats(): Promise<AdminStats> {
     const monthStart = formatInTimeZone(startOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
     const monthEnd = formatInTimeZone(endOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
 
+    const attendanceCount = (scope: 'today' | 'month', statuses: string[]) => {
+      let query = service
+        .from('attendance')
+        .select('id', { count: 'exact', head: true });
+
+      if (scope === 'today') {
+        query = query.eq('date', today);
+      } else {
+        query = query.gte('date', monthStart).lte('date', monthEnd);
+      }
+
+      return statuses.length === 1 ? query.eq('status', statuses[0]) : query.in('status', statuses);
+    };
+
     const [
       { count: totalActive },
-      { data: todayRecords },
-      { data: monthRecords },
+      { count: todayPresent },
+      { count: todayLate },
+      { count: todayAbsent },
+      { count: todayLeave },
+      { count: monthPresent },
+      { count: monthLate },
+      { count: monthAbsent },
       { count: pendingLeave },
       { data: recentActivity },
     ] = await Promise.all([
       service.from('profiles').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('role', 'employee'),
-      service.from('attendance').select('user_id, status').eq('date', today),
-      service.from('attendance').select('status').gte('date', monthStart).lte('date', monthEnd),
+      attendanceCount('today', ['present', 'late']),
+      attendanceCount('today', ['late']),
+      attendanceCount('today', ['absent']),
+      attendanceCount('today', ['leave']),
+      attendanceCount('month', ['present', 'late']),
+      attendanceCount('month', ['late']),
+      attendanceCount('month', ['absent']),
       service.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       service
         .from('activity_logs')
@@ -34,15 +58,6 @@ export async function getAdminStats(): Promise<AdminStats> {
         .order('created_at', { ascending: false })
         .limit(5),
     ]);
-
-    const today_present = (todayRecords ?? []).filter((r) => r.status === 'present' || r.status === 'late').length;
-    const today_late = (todayRecords ?? []).filter((r) => r.status === 'late').length;
-    const today_absent = (todayRecords ?? []).filter((r) => r.status === 'absent').length;
-    const today_leave = (todayRecords ?? []).filter((r) => r.status === 'leave').length;
-
-    const month_present = (monthRecords ?? []).filter((r) => r.status === 'present' || r.status === 'late').length;
-    const month_late = (monthRecords ?? []).filter((r) => r.status === 'late').length;
-    const month_absent = (monthRecords ?? []).filter((r) => r.status === 'absent').length;
 
     const activity = (recentActivity ?? []).map((log) => {
       const actor = Array.isArray(log.actor) ? (log.actor[0] ?? null) : (log.actor ?? null);
@@ -57,8 +72,17 @@ export async function getAdminStats(): Promise<AdminStats> {
 
     return {
       total_active: totalActive ?? 0,
-      today: { present: today_present, late: today_late, absent: today_absent, leave: today_leave },
-      month: { present: month_present, late: month_late, absent: month_absent },
+      today: {
+        present: todayPresent ?? 0,
+        late: todayLate ?? 0,
+        absent: todayAbsent ?? 0,
+        leave: todayLeave ?? 0,
+      },
+      month: {
+        present: monthPresent ?? 0,
+        late: monthLate ?? 0,
+        absent: monthAbsent ?? 0,
+      },
       pending_leave: pendingLeave ?? 0,
       recent_activity: activity,
     };

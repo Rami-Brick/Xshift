@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
   const today = todayDateInOffice();
 
   const [{ data: settings }, { data: existing }] = await Promise.all([
-    service.from('office_settings').select('*').single(),
+    service
+      .from('office_settings')
+      .select('office_latitude, office_longitude, allowed_radius_meters, gps_accuracy_limit_meters')
+      .single(),
     service
       .from('attendance')
       .select('id, check_in_at, check_out_at')

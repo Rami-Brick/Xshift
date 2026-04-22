@@ -5,12 +5,8 @@ import { Plus, Check, X as XIcon, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
 import { AdminLeaveDialog } from './AdminLeaveDialog';
-import type { LeaveRequest, Profile } from '@/types';
+import type { LeaveRequestListItem, Profile } from '@/types';
 import { formatInTimeZone } from 'date-fns-tz';
-
-type LeaveWithProfile = LeaveRequest & {
-  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
-};
 
 const TYPE_LABEL: Record<string, string> = {
   annual: 'Congé annuel',
@@ -38,12 +34,12 @@ function daysBetween(start: string, end: string): number {
 }
 
 interface Props {
-  initialRequests: LeaveWithProfile[];
+  initialRequests: LeaveRequestListItem[];
   employees: Pick<Profile, 'id' | 'full_name'>[];
 }
 
 export function AdminLeaveTable({ initialRequests, employees }: Props) {
-  const [requests, setRequests] = useState<LeaveWithProfile[]>(initialRequests);
+  const [requests, setRequests] = useState<LeaveRequestListItem[]>(initialRequests);
   const [showDialog, setShowDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -80,7 +76,7 @@ export function AdminLeaveTable({ initialRequests, employees }: Props) {
     setRequests((prev) => prev.filter((r) => r.id !== id));
   }
 
-  function handleCreated(req: LeaveWithProfile) {
+  function handleCreated(req: LeaveRequestListItem) {
     setRequests((prev) => [req, ...prev]);
     setShowDialog(false);
   }

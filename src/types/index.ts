@@ -67,6 +67,21 @@ export interface Attendance {
   profiles?: Profile;
 }
 
+export type AttendanceListItem = Pick<
+  Attendance,
+  | 'id'
+  | 'user_id'
+  | 'date'
+  | 'check_in_at'
+  | 'check_out_at'
+  | 'status'
+  | 'late_minutes'
+  | 'forgot_checkout'
+  | 'note'
+> & {
+  profiles?: Pick<Profile, 'id' | 'full_name' | 'email' | 'work_start_time'>;
+};
+
 export interface LeaveRequest {
   id: string;
   user_id: string;
@@ -84,6 +99,23 @@ export interface LeaveRequest {
   updated_at: string;
   profiles?: Profile;
 }
+
+export type LeaveRequestListItem = Pick<
+  LeaveRequest,
+  | 'id'
+  | 'user_id'
+  | 'start_date'
+  | 'end_date'
+  | 'type'
+  | 'status'
+  | 'reason'
+  | 'admin_note'
+  | 'deduct_balance'
+  | 'created_at'
+  | 'updated_at'
+> & {
+  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
+};
 
 export interface OfficeSettings {
   id: string;

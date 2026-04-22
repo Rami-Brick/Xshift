@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
 
   let query = service
     .from('attendance')
-    .select('*, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)')
+    .select(
+      'id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout, note, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)',
+    )
     .order('date', { ascending: false })
     .limit(200);
 
@@ -66,7 +68,9 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: 'user_id,date' },
     )
-    .select()
+    .select(
+      'id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout, note, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)',
+    )
     .single();
 
   if (error) {

@@ -6,17 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminLeaveSchema, type AdminLeaveInput } from '@/lib/validation/leave';
-import type { LeaveRequest, Profile } from '@/types';
+import type { LeaveRequestListItem, Profile } from '@/types';
 import { formatInTimeZone } from 'date-fns-tz';
-
-type LeaveWithProfile = LeaveRequest & {
-  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
-};
 
 interface Props {
   employees: Pick<Profile, 'id' | 'full_name'>[];
   onClose: () => void;
-  onSuccess: (req: LeaveWithProfile) => void;
+  onSuccess: (req: LeaveRequestListItem) => void;
 }
 
 export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
@@ -57,7 +53,7 @@ export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
       return;
     }
     toast.success('Congé assigné');
-    onSuccess(json as LeaveWithProfile);
+    onSuccess(json as LeaveRequestListItem);
   }
 
   return (

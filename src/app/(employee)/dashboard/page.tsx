@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   const [{ data: todayRecord }, { data: monthRecords }, { data: recent }, { data: settings }] = await timeAsync('page.employee.dashboard.data', () => Promise.all([
     supabase
       .from('attendance')
-      .select('*')
+      .select('id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout')
       .eq('user_id', profile.id)
       .eq('date', today)
       .maybeSingle(),
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
       .lte('date', monthEnd),
     supabase
       .from('attendance')
-      .select('*')
+      .select('id, date, check_in_at, check_out_at, status')
       .eq('user_id', profile.id)
       .order('date', { ascending: false })
       .limit(5),

@@ -33,7 +33,12 @@ export async function POST(request: NextRequest) {
   const service = createServiceClient();
 
   const [{ data: settings }, { data: profile }] = await Promise.all([
-    service.from('office_settings').select('*').single(),
+    service
+      .from('office_settings')
+      .select(
+        'office_latitude, office_longitude, allowed_radius_meters, gps_accuracy_limit_meters, grace_period_minutes',
+      )
+      .single(),
     service.from('profiles').select('work_start_time').eq('id', user.id).single(),
   ]);
 

@@ -6,20 +6,16 @@ import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { differenceInMinutes } from 'date-fns';
-import type { Attendance, Profile } from '@/types';
+import type { AttendanceListItem, Profile } from '@/types';
 
 const OFFICE_TZ = 'Africa/Tunis';
 
-type AttendanceWithProfile = Attendance & {
-  profiles?: Pick<Profile, 'id' | 'full_name' | 'email' | 'work_start_time'>;
-};
-
 interface Props {
-  record: AttendanceWithProfile | null;
+  record: AttendanceListItem | null;
   employees: Pick<Profile, 'id' | 'full_name' | 'work_start_time'>[];
   gracePeriodMinutes: number;
   onClose: () => void;
-  onSuccess: (saved: AttendanceWithProfile) => void;
+  onSuccess: (saved: AttendanceListItem) => void;
 }
 
 type FormData = {
@@ -126,7 +122,7 @@ export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, on
     }
 
     toast.success(isEdit ? 'Présence mise à jour' : 'Présence créée');
-    onSuccess(json as AttendanceWithProfile);
+    onSuccess(json as AttendanceListItem);
   }
 
   return (

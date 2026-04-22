@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
 
   let query = service
     .from('profiles')
-    .select('*')
+    .select(
+      'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, is_active, avatar_url, created_at, updated_at',
+    )
     .order('full_name', { ascending: true });
 
   if (activeOnly) query = query.eq('is_active', true);
@@ -97,6 +99,12 @@ export async function POST(request: NextRequest) {
   });
 
   // Return the new profile
-  const { data: newProfile } = await service.from('profiles').select('*').eq('id', authUser.user.id).single();
+  const { data: newProfile } = await service
+    .from('profiles')
+    .select(
+      'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, is_active, avatar_url, created_at, updated_at',
+    )
+    .eq('id', authUser.user.id)
+    .single();
   return NextResponse.json(newProfile, { status: 201 });
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { Card } from '@/design-kit/primitives/Card';
 import { Chip } from '@/design-kit/primitives/Chip';
@@ -32,7 +31,6 @@ interface TodayCardProps {
 
 export function TodayCard({ initialToday, gracePeriodMinutes }: TodayCardProps) {
   const [today, setToday] = useState<Attendance | null>(initialToday);
-  const router = useRouter();
 
   async function refresh() {
     const res = await fetch(
@@ -42,7 +40,6 @@ export function TodayCard({ initialToday, gracePeriodMinutes }: TodayCardProps) 
       const data = await res.json();
       setToday(data[0] ?? null);
     }
-    router.refresh();
   }
 
   return (
