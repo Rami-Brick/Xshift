@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -5,6 +6,7 @@ export interface SideNavItemSpec<K extends string = string> {
   key: K;
   icon: LucideIcon;
   label: string;
+  href?: string;
 }
 
 export interface SideNavRailProps<K extends string = string> {
@@ -38,6 +40,28 @@ export function SideNavRail<K extends string = string>({
       {items.map((item) => {
         const Icon = item.icon;
         const active = item.key === activeKey;
+        const itemClassName = cn(
+          'inline-flex h-12 w-12 items-center justify-center rounded-full transition',
+          active ? 'bg-surface text-brand' : 'bg-navSlate text-white hover:bg-navSlateHover'
+        );
+
+        const icon = <Icon size={20} strokeWidth={active ? 2.25 : 2} />;
+
+        if (item.href) {
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              prefetch
+              aria-label={item.label}
+              aria-current={active ? 'page' : undefined}
+              className={itemClassName}
+            >
+              {icon}
+            </Link>
+          );
+        }
+
         return (
           <button
             key={item.key}
@@ -45,12 +69,9 @@ export function SideNavRail<K extends string = string>({
             aria-label={item.label}
             aria-pressed={active}
             onClick={() => onChange?.(item.key)}
-            className={cn(
-              'inline-flex h-12 w-12 items-center justify-center rounded-full transition',
-              active ? 'bg-surface text-brand' : 'bg-navSlate text-white hover:bg-navSlateHover'
-            )}
+            className={itemClassName}
           >
-            <Icon size={20} strokeWidth={active ? 2.25 : 2} />
+            {icon}
           </button>
         );
       })}

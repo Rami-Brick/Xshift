@@ -1,7 +1,7 @@
-import { requireAdmin } from '@/lib/auth/guards';
 import { AdminDashboardClient } from '@/components/admin/AdminDashboardClient';
+import { getAdminStats } from '@/lib/admin/stats';
 
 export default async function AdminDashboardPage() {
-  await requireAdmin();
-  return <AdminDashboardClient />;
+  const stats = await getAdminStats();
+  return <AdminDashboardClient initialStats={stats} />;
 }

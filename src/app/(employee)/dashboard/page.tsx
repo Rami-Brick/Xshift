@@ -1,5 +1,6 @@
-import { requireUser } from '@/lib/auth/guards';
+import { requireUserCached } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
+import { timeAsync } from '@/lib/perf/timing';
 import { TodayCard } from '@/components/attendance/TodayCard';
 import { KpiCard } from '@/design-kit/compounds/KpiCard';
 import { formatTime, formatDate } from '@/lib/attendance/status';
@@ -18,7 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const { profile } = await requireUser();
+  const { profile } = await requireUserCached();
   const supabase = await createClient();
 
   const today = todayDateInOffice();
@@ -26,7 +27,7 @@ export default async function DashboardPage() {
   const monthStart = formatInTimeZone(startOfMonth(now), 'Africa/Tunis', 'yyyy-MM-dd');
   const monthEnd = formatInTimeZone(endOfMonth(now), 'Africa/Tunis', 'yyyy-MM-dd');
 
-  const [{ data: todayRecord }, { data: monthRecords }] = await Promise.all([
+  const [{ data: todayRecord }, { data: monthRecords }, { data: recent }, { data: settings }] = await timeAsync('page.employee.dashboard.data', () => Promise.all([
     supabase
       .from('attendance')
       .select('*')
@@ -39,18 +40,20 @@ export default async function DashboardPage() {
       .eq('user_id', profile.id)
       .gte('date', monthStart)
       .lte('date', monthEnd),
-  ]);
+    supabase
+      .from('attendance')
+      .select('*')
+      .eq('user_id', profile.id)
+      .order('date', { ascending: false })
+      .limit(5),
+    supabase
+      .from('office_settings')
+      .select('grace_period_minutes')
+      .single(),
+  ]));
 
   const presentCount = monthRecords?.filter((r) => r.status === 'present' || r.status === 'late').length ?? 0;
   const lateCount = monthRecords?.filter((r) => r.status === 'late').length ?? 0;
-
-  // Recent 5 records
-  const { data: recent } = await supabase
-    .from('attendance')
-    .select('*')
-    .eq('user_id', profile.id)
-    .order('date', { ascending: false })
-    .limit(5);
 
   const firstName = profile.full_name.split(' ')[0];
 
@@ -66,7 +69,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Today check-in card */}
-      <TodayCard initialToday={todayRecord as Attendance | null} />
+      <TodayCard initialToday={todayRecord as Attendance | null} gracePeriodMinutes={settings?.grace_period_minutes ?? 10} />
 
       {/* KPI row */}
       <div className="grid grid-cols-3 gap-3">

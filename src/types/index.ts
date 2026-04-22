@@ -114,3 +114,16 @@ export interface ActivityLog {
   actor?: Profile;
   target?: Profile;
 }
+
+export interface AdminStats {
+  total_active: number;
+  today: { present: number; late: number; absent: number; leave: number };
+  month: { present: number; late: number; absent: number };
+  pending_leave: number;
+  recent_activity: Array<{
+    id: string;
+    action: string;
+    created_at: string;
+    actor: { full_name: string } | null;
+  }>;
+}

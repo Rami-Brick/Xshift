@@ -1,5 +1,5 @@
-import { requireAdmin } from '@/lib/auth/guards';
 import { createServiceClient } from '@/lib/supabase/service';
+import { timeAsync } from '@/lib/perf/timing';
 import { notFound } from 'next/navigation';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -30,7 +30,6 @@ interface PageProps {
 }
 
 export default async function AdminEmployeeDetailPage({ params }: PageProps) {
-  await requireAdmin();
   const { id } = await params;
   const service = createServiceClient();
 
@@ -38,7 +37,7 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
   const monthStart = formatInTimeZone(startOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
   const monthEnd = formatInTimeZone(endOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
 
-  const [{ data: profile }, { data: monthRecords }, { data: recent }] = await Promise.all([
+  const [{ data: profile }, { data: monthRecords }, { data: recent }] = await timeAsync('page.admin.employee.detail.data', () => Promise.all([
     service.from('profiles').select('*').eq('id', id).single(),
     service
       .from('attendance')
@@ -52,7 +51,7 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
       .eq('user_id', id)
       .order('date', { ascending: false })
       .limit(10),
-  ]);
+  ]));
 
   if (!profile) notFound();
 

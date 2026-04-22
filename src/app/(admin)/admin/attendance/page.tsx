@@ -1,5 +1,5 @@
-import { requireAdmin } from '@/lib/auth/guards';
 import { createServiceClient } from '@/lib/supabase/service';
+import { timeAsync } from '@/lib/perf/timing';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { AttendanceTable } from '@/components/admin/AttendanceTable';
@@ -17,7 +17,6 @@ interface PageProps {
 }
 
 export default async function AdminAttendancePage({ searchParams }: PageProps) {
-  await requireAdmin();
   const service = createServiceClient();
 
   const filters = await searchParams;
@@ -26,11 +25,11 @@ export default async function AdminAttendancePage({ searchParams }: PageProps) {
   const start = filters.start ?? formatInTimeZone(startOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
   const end = filters.end ?? formatInTimeZone(endOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
 
-  const [attendanceResult, employeesResult] = await Promise.all([
+  const [attendanceResult, employeesResult, settingsResult] = await timeAsync('page.admin.attendance.data', () => Promise.all([
     (() => {
       let q = service
         .from('attendance')
-        .select('*, profiles!attendance_user_id_fkey(id, full_name, email)')
+        .select('*, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)')
         .order('date', { ascending: false })
         .gte('date', start)
         .lte('date', end)
@@ -41,11 +40,13 @@ export default async function AdminAttendancePage({ searchParams }: PageProps) {
 
       return q;
     })(),
-    service.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
-  ]);
+    service.from('profiles').select('id, full_name, work_start_time').eq('is_active', true).order('full_name'),
+    service.from('office_settings').select('grace_period_minutes').single(),
+  ]));
 
-  const records = (attendanceResult.data ?? []) as (Attendance & { profiles?: Pick<Profile, 'id' | 'full_name' | 'email'> })[];
-  const employees = (employeesResult.data ?? []) as Pick<Profile, 'id' | 'full_name'>[];
+  const records = (attendanceResult.data ?? []) as (Attendance & { profiles?: Pick<Profile, 'id' | 'full_name' | 'email' | 'work_start_time'> })[];
+  const employees = (employeesResult.data ?? []) as Pick<Profile, 'id' | 'full_name' | 'work_start_time'>[];
+  const gracePeriodMinutes = (settingsResult.data?.grace_period_minutes ?? 10) as number;
 
   return (
     <div className="space-y-5">
@@ -54,6 +55,7 @@ export default async function AdminAttendancePage({ searchParams }: PageProps) {
         initialRecords={records}
         employees={employees}
         initialFilters={{ start, end, user_id: filters.user_id, status: filters.status }}
+        gracePeriodMinutes={gracePeriodMinutes}
       />
     </div>
   );

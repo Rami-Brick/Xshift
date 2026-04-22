@@ -9,11 +9,13 @@ export const createEmployeeSchema = z.object({
   department: z.string().optional(),
   work_start_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'Format HH:mm requis')
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Format HH:mm requis')
+    .transform((v) => v.slice(0, 5))
     .optional(),
   work_end_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'Format HH:mm requis')
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Format HH:mm requis')
+    .transform((v) => v.slice(0, 5))
     .optional(),
   leave_balance: z.coerce.number().min(0).max(365).optional(),
   role: z.enum(['employee', 'admin']).optional(),
@@ -26,11 +28,13 @@ export const updateEmployeeSchema = z.object({
   department: z.string().nullable().optional(),
   work_start_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'Format HH:mm requis')
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Format HH:mm requis')
+    .transform((v) => v.slice(0, 5))
     .optional(),
   work_end_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'Format HH:mm requis')
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Format HH:mm requis')
+    .transform((v) => v.slice(0, 5))
     .optional(),
   leave_balance: z.coerce.number().min(0).max(365).optional(),
   role: z.enum(['employee', 'admin']).optional(),

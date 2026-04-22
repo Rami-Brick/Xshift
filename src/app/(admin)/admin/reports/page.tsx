@@ -1,17 +1,18 @@
-import { requireAdmin } from '@/lib/auth/guards';
 import { createServiceClient } from '@/lib/supabase/service';
+import { timeAsync } from '@/lib/perf/timing';
 import { ReportsClient } from '@/components/admin/ReportsClient';
 import type { Profile } from '@/types';
 
 export default async function AdminReportsPage() {
-  await requireAdmin();
   const service = createServiceClient();
 
-  const { data } = await service
-    .from('profiles')
-    .select('id, full_name')
-    .eq('is_active', true)
-    .order('full_name');
+  const { data } = await timeAsync('page.admin.reports.data', () =>
+    service
+      .from('profiles')
+      .select('id, full_name')
+      .eq('is_active', true)
+      .order('full_name'),
+  );
 
   const employees = (data ?? []) as Pick<Profile, 'id' | 'full_name'>[];
 

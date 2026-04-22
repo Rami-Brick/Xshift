@@ -27,9 +27,10 @@ const STATUS_TONE: Record<string, 'lime' | 'trendDown' | 'neutral'> = {
 
 interface TodayCardProps {
   initialToday: Attendance | null;
+  gracePeriodMinutes: number;
 }
 
-export function TodayCard({ initialToday }: TodayCardProps) {
+export function TodayCard({ initialToday, gracePeriodMinutes }: TodayCardProps) {
   const [today, setToday] = useState<Attendance | null>(initialToday);
   const router = useRouter();
 
@@ -73,9 +74,19 @@ export function TodayCard({ initialToday }: TodayCardProps) {
               {today?.check_in_at ? formatTime(today.check_in_at) : '—'}
             </span>
           </div>
-          {(today?.late_minutes ?? 0) > 0 && (
+          {(today?.late_minutes ?? 0) > gracePeriodMinutes && (
             <p className="text-caption text-trend-down mt-1">
               +{today!.late_minutes} min de retard
+            </p>
+          )}
+          {(today?.late_minutes ?? 0) > 0 && (today?.late_minutes ?? 0) <= gracePeriodMinutes && (
+            <p className="text-caption text-muted mt-1">
+              +{today!.late_minutes} min (dans la tolérance)
+            </p>
+          )}
+          {(today?.late_minutes ?? 0) < 0 && (
+            <p className="text-caption text-trend-up mt-1">
+              {today!.late_minutes} min d&apos;avance
             </p>
           )}
         </div>

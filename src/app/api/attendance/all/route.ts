@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   let query = service
     .from('attendance')
-    .select('*, profiles!attendance_user_id_fkey(id, full_name, email)')
+    .select('*, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)')
     .order('date', { ascending: false })
     .limit(200);
 

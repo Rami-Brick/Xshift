@@ -1,17 +1,20 @@
-import { requireUser } from '@/lib/auth/guards';
+import { requireUserCached } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
+import { timeAsync } from '@/lib/perf/timing';
 import { LeavePageClient } from '@/components/leave/LeavePageClient';
 import type { LeaveRequest } from '@/types';
 
 export default async function LeavePage() {
-  const { profile } = await requireUser();
+  const { profile } = await requireUserCached();
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from('leave_requests')
-    .select('*')
-    .eq('user_id', profile.id)
-    .order('created_at', { ascending: false });
+  const { data } = await timeAsync('page.employee.leave.data', () =>
+    supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false }),
+  );
 
   const requests = (data ?? []) as LeaveRequest[];
 

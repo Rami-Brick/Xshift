@@ -10,7 +10,7 @@ import { formatTime, formatDate } from '@/lib/attendance/status';
 import type { Attendance, Profile } from '@/types';
 
 type AttendanceWithProfile = Attendance & {
-  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
+  profiles?: Pick<Profile, 'id' | 'full_name' | 'email' | 'work_start_time'>;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -36,11 +36,12 @@ interface Filters {
 
 interface AttendanceTableProps {
   initialRecords: AttendanceWithProfile[];
-  employees: Pick<Profile, 'id' | 'full_name'>[];
+  employees: Pick<Profile, 'id' | 'full_name' | 'work_start_time'>[];
   initialFilters: Filters;
+  gracePeriodMinutes: number;
 }
 
-export function AttendanceTable({ initialRecords, employees, initialFilters }: AttendanceTableProps) {
+export function AttendanceTable({ initialRecords, employees, initialFilters, gracePeriodMinutes }: AttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceWithProfile[]>(initialRecords);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [loading, setLoading] = useState(false);
@@ -196,7 +197,13 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
                       </Chip>
                     </td>
                     <td className="px-4 py-3 text-muted">
-                      {(row.late_minutes ?? 0) > 0 ? `+${row.late_minutes} min` : '—'}
+                      {(() => {
+                        const m = row.late_minutes ?? 0;
+                        if (m < 0) return <span className="text-trend-up">{m} min</span>;
+                        if (m > gracePeriodMinutes) return <span className="text-trend-down">+{m} min</span>;
+                        if (m > 0) return <span className="text-muted">+{m} min</span>;
+                        return <span className="text-muted">—</span>;
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
@@ -234,6 +241,7 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
         <AttendanceEditDialog
           record={editTarget === 'new' ? null : editTarget}
           employees={employees}
+          gracePeriodMinutes={gracePeriodMinutes}
           onClose={() => setEditTarget(null)}
           onSuccess={handleSaved}
         />

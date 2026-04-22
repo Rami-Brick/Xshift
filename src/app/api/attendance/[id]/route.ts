@@ -32,7 +32,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     .from('attendance')
     .update({ ...parsed.data, updated_by: actorId })
     .eq('id', id)
-    .select()
+    .select('*, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)')
     .single();
 
   if (error) {

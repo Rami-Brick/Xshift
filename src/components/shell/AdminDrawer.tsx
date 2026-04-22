@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Menu, X, LayoutDashboard, Users, Clock,
   CalendarDays, BarChart2, Settings, ScrollText, LogOut,
@@ -34,12 +35,6 @@ const KEY_TO_PATH: Record<NavKey, string> = {
 export function AdminMobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-
-  function navigate(key: NavKey) {
-    router.push(KEY_TO_PATH[key]);
-    setOpen(false);
-  }
 
   return (
     <>
@@ -91,10 +86,12 @@ export function AdminMobileHeader() {
           {NAV_ITEMS.map(({ key, icon: Icon, label }) => {
             const active = pathname.startsWith(KEY_TO_PATH[key]);
             return (
-              <button
+              <Link
                 key={key}
-                type="button"
-                onClick={() => navigate(key)}
+                href={KEY_TO_PATH[key]}
+                prefetch
+                onClick={() => setOpen(false)}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium transition',
                   active
@@ -104,7 +101,7 @@ export function AdminMobileHeader() {
               >
                 <Icon size={18} strokeWidth={active ? 2.25 : 2} />
                 {label}
-              </button>
+              </Link>
             );
           })}
         </nav>

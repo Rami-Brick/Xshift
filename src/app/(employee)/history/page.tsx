@@ -1,5 +1,6 @@
-import { requireUser } from '@/lib/auth/guards';
+import { requireUserCached } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
+import { timeAsync } from '@/lib/perf/timing';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { formatTime, formatDate } from '@/lib/attendance/status';
@@ -38,7 +39,7 @@ interface PageProps {
 }
 
 export default async function HistoryPage({ searchParams }: PageProps) {
-  const { profile } = await requireUser();
+  const { profile } = await requireUserCached();
   const supabase = await createClient();
 
   const { month } = await searchParams;
@@ -52,13 +53,15 @@ export default async function HistoryPage({ searchParams }: PageProps) {
   const monthStart = formatInTimeZone(startOfMonth(refDate), OFFICE_TZ, 'yyyy-MM-dd');
   const monthEnd = formatInTimeZone(endOfMonth(refDate), OFFICE_TZ, 'yyyy-MM-dd');
 
-  const { data: records } = await supabase
-    .from('attendance')
-    .select('*')
-    .eq('user_id', profile.id)
-    .gte('date', monthStart)
-    .lte('date', monthEnd)
-    .order('date', { ascending: false });
+  const { data: records } = await timeAsync('page.employee.history.data', () =>
+    supabase
+      .from('attendance')
+      .select('*')
+      .eq('user_id', profile.id)
+      .gte('date', monthStart)
+      .lte('date', monthEnd)
+      .order('date', { ascending: false }),
+  );
 
   const rows = (records ?? []) as Attendance[];
 

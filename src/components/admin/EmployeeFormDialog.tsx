@@ -39,8 +39,8 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
           phone: employee.phone ?? '',
           position: employee.position ?? '',
           department: employee.department ?? '',
-          work_start_time: employee.work_start_time,
-          work_end_time: employee.work_end_time,
+          work_start_time: employee.work_start_time.slice(0, 5),
+          work_end_time: employee.work_end_time.slice(0, 5),
           leave_balance: employee.leave_balance,
           role: employee.role,
           is_active: employee.is_active,
@@ -139,10 +139,10 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Heure d'arrivée" error={errors.work_start_time?.message}>
-              <input {...register('work_start_time')} className={inputCls} placeholder="08:30" />
+              <input {...register('work_start_time')} type="time" className={inputCls} />
             </Field>
             <Field label="Heure de départ" error={errors.work_end_time?.message}>
-              <input {...register('work_end_time')} className={inputCls} placeholder="17:30" />
+              <input {...register('work_end_time')} type="time" className={inputCls} />
             </Field>
           </div>
 

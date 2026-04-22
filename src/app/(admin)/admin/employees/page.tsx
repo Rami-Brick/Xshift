@@ -1,16 +1,17 @@
-import { requireAdmin } from '@/lib/auth/guards';
 import { createServiceClient } from '@/lib/supabase/service';
+import { timeAsync } from '@/lib/perf/timing';
 import { EmployeeList } from '@/components/admin/EmployeeList';
 import type { Profile } from '@/types';
 
 export default async function AdminEmployeesPage() {
-  await requireAdmin();
   const service = createServiceClient();
 
-  const { data } = await service
-    .from('profiles')
-    .select('*')
-    .order('full_name', { ascending: true });
+  const { data } = await timeAsync('page.admin.employees.data', () =>
+    service
+      .from('profiles')
+      .select('*')
+      .order('full_name', { ascending: true }),
+  );
 
   const employees = (data ?? []) as Profile[];
 

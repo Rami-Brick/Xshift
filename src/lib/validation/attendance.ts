@@ -6,7 +6,7 @@ export const manualAttendanceSchema = z.object({
   status: z.enum(['present', 'late', 'absent', 'leave', 'holiday']),
   check_in_at: z.string().nullable().optional(),
   check_out_at: z.string().nullable().optional(),
-  late_minutes: z.coerce.number().min(0).optional(),
+  late_minutes: z.coerce.number().optional(),
   note: z.string().nullable().optional(),
 });
 

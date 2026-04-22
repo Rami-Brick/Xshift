@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
   const now = new Date();
   const gracePeriod = settings.grace_period_minutes ?? 10;
   const lateMinutes = calcLateMinutes(profile.work_start_time, gracePeriod, now);
-  const status = resolveStatus(lateMinutes);
+  const status = resolveStatus(lateMinutes, gracePeriod);
 
   const { error: upsertError } = await service.from('attendance').upsert(
     {
