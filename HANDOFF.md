@@ -161,8 +161,6 @@ activity_action:  'checkin' | 'checkout' | 'create_employee' | 'update_employee'
 | `full_name` | text NOT NULL | |
 | `email` | text UNIQUE NOT NULL | |
 | `phone` | text | |
-| `position` | text | Job title |
-| `department` | text | |
 | `role` | user_role DEFAULT 'employee' | |
 | `work_start_time` | time NOT NULL DEFAULT '08:30' | Per-employee schedule |
 | `work_end_time` | time NOT NULL DEFAULT '17:30' | |
@@ -598,7 +596,7 @@ interface MonthFilterProps {
 ### Admin Components (`src/components/admin/`)
 
 #### `EmployeeList.tsx` — Client
-- Client-side search filter on name/email/department/position
+- Client-side search filter on name/email
 - Calls `POST /api/employees` for new employees
 - Links to `/admin/employees/[id]` for each row
 - `handleCreated(profile)` inserts new profile into local state and re-sorts
@@ -864,7 +862,7 @@ export async function logActivity(params: {
 loginSchema: { email: string (email), password: string (min 6) }
 
 // employee.ts
-createEmployeeSchema: { full_name, email, password, phone?, position?, department?,
+createEmployeeSchema: { full_name, email, password, phone?,
                         work_start_time?, work_end_time?, leave_balance?, role? }
 updateEmployeeSchema: (all partial, no email/password)
 
@@ -1090,7 +1088,7 @@ The database has a `CHECK (leave_balance >= 0)` constraint. The `decrement_leave
 
 ### 13. Employee Creation Uses Upsert, Not Insert
 
-`POST /api/employees` uses `service.from('profiles').upsert(..., { onConflict: 'id' })`, not `.insert()`. Reason: the `handle_new_user` trigger fires immediately after `auth.admin.createUser()` and inserts a sparse profile row (id, email, full_name, role only). A plain `.insert()` would hit a duplicate primary key error. The upsert overwrites the trigger's sparse row with the full admin-provided data (schedule, leave_balance, department, etc.).
+`POST /api/employees` uses `service.from('profiles').upsert(..., { onConflict: 'id' })`, not `.insert()`. Reason: the `handle_new_user` trigger fires immediately after `auth.admin.createUser()` and inserts a sparse profile row (id, email, full_name, role only). A plain `.insert()` would hit a duplicate primary key error. The upsert overwrites the trigger's sparse row with the full admin-provided data (schedule, leave_balance, default day off, etc.).
 
 ### 14. No Multi-Tenancy
 

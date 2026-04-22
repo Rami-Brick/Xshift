@@ -42,7 +42,7 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
     service
       .from('profiles')
       .select(
-        'id, full_name, email, phone, position, department, role, work_start_time, work_end_time, leave_balance, is_active, avatar_url, created_at, updated_at',
+        'id, full_name, email, phone, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
       )
       .eq('id', id)
       .single(),
@@ -79,7 +79,6 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
             {!p.is_active && <Chip variant="dark">Inactif</Chip>}
           </div>
           <p className="text-sm text-muted mt-0.5">{p.email}</p>
-          {p.position && <p className="text-sm text-muted">{p.position}{p.department ? ` · ${p.department}` : ''}</p>}
         </div>
         <EmployeeDetailActions employee={p} />
       </div>

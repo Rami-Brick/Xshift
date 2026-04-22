@@ -49,8 +49,6 @@ export interface Profile {
   full_name: string;
   email: string;
   phone: string | null;
-  position: string | null;
-  department: string | null;
   role: Role;
   work_start_time: string;
   work_end_time: string;

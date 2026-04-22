@@ -37,8 +37,6 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
       ? {
           full_name: employee.full_name,
           phone: employee.phone ?? '',
-          position: employee.position ?? '',
-          department: employee.department ?? '',
           work_start_time: employee.work_start_time.slice(0, 5),
           work_end_time: employee.work_end_time.slice(0, 5),
           leave_balance: employee.leave_balance,
@@ -125,15 +123,6 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
               <input {...register('password')} type="password" className={inputCls} placeholder="••••••" />
             </Field>
           )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Poste" error={errors.position?.message}>
-              <input {...register('position')} className={inputCls} placeholder="Développeur" />
-            </Field>
-            <Field label="Département" error={errors.department?.message}>
-              <input {...register('department')} className={inputCls} placeholder="IT" />
-            </Field>
-          </div>
 
           <Field label="Téléphone" error={errors.phone?.message}>
             <input {...register('phone')} className={inputCls} placeholder="+216 XX XXX XXX" />

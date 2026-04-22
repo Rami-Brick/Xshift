@@ -6,8 +6,6 @@ export const createEmployeeSchema = z.object({
   email: z.string().email('Email invalide'),
   password: z.string().min(6, 'Mot de passe requis (min. 6 caractères)'),
   phone: z.string().optional(),
-  position: z.string().optional(),
-  department: z.string().optional(),
   work_start_time: z
     .string()
     .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Format HH:mm requis')
@@ -26,8 +24,6 @@ export const createEmployeeSchema = z.object({
 export const updateEmployeeSchema = z.object({
   full_name: z.string().min(2, 'Nom requis (min. 2 caractères)').optional(),
   phone: z.string().nullable().optional(),
-  position: z.string().nullable().optional(),
-  department: z.string().nullable().optional(),
   work_start_time: z
     .string()
     .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Format HH:mm requis')

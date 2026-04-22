@@ -115,8 +115,6 @@
       "create": "Créer un employé",
       "fullName": "Nom complet",
       "phone": "Téléphone",
-      "position": "Poste",
-      "department": "Département",
       "role": "Rôle",
       "workHours": "Heures de travail",
       "tempPassword": "Mot de passe temporaire",
