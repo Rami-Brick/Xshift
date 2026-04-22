@@ -13,6 +13,15 @@ interface CheckInButtonProps {
 
 type Phase = 'idle' | 'locating' | 'submitting';
 
+type CheckInErrorResponse = {
+  code?: string;
+  error?: string;
+  accuracy?: number;
+  limit?: number;
+  distance?: number;
+  radius?: number;
+};
+
 export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
   const [phase, setPhase] = useState<Phase>('idle');
 
@@ -38,7 +47,7 @@ export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
       if (code === GeolocationPositionError.PERMISSION_DENIED) {
         toast.error('Accès à la localisation refusé');
       } else if (code === GeolocationPositionError.TIMEOUT) {
-        toast.error('GPS indisponible — délai dépassé');
+        toast.error('GPS indisponible - délai dépassé');
       } else {
         toast.error('GPS indisponible');
       }
@@ -57,16 +66,28 @@ export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
         body: JSON.stringify({ latitude, longitude, accuracy }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as CheckInErrorResponse;
 
       if (!res.ok) {
-        toast.error(data.error ?? 'Erreur lors du pointage');
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Pointage refusé', {
+            endpoint,
+            status: res.status,
+            response: data,
+            coords: {
+              latitude,
+              longitude,
+              accuracy: Math.round(accuracy),
+            },
+          });
+        }
+        toast.error(formatCheckInError(data));
       } else {
         toast.success(hasCheckedIn ? 'Départ pointé avec succès' : 'Arrivée pointée avec succès');
         onSuccess();
       }
     } catch {
-      toast.error('Erreur réseau — réessayez');
+      toast.error('Erreur réseau - réessayez');
     } finally {
       setPhase('idle');
     }
@@ -83,8 +104,12 @@ export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
 
   const loading = phase !== 'idle';
   const label = loading
-    ? phase === 'locating' ? 'Localisation…' : 'Pointage…'
-    : hasCheckedIn ? 'Pointer le départ' : 'Pointer l\'arrivée';
+    ? phase === 'locating'
+      ? 'Localisation...'
+      : 'Pointage...'
+    : hasCheckedIn
+      ? 'Pointer le départ'
+      : "Pointer l'arrivée";
 
   const Icon = loading ? Loader2 : hasCheckedIn ? LogOut : LogIn;
 
@@ -105,4 +130,16 @@ export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
       {label}
     </button>
   );
+}
+
+function formatCheckInError(data: CheckInErrorResponse): string {
+  if (data.code === 'gps_accuracy_too_low' && data.accuracy && data.limit) {
+    return `Précision GPS insuffisante (${data.accuracy} m, maximum autorisé : ${data.limit} m)`;
+  }
+
+  if (data.code === 'outside_geofence' && data.distance && data.radius) {
+    return `Vous êtes à ${data.distance} m du bureau (rayon autorisé : ${data.radius} m)`;
+  }
+
+  return data.error ?? 'Erreur lors du pointage';
 }

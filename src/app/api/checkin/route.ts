@@ -8,7 +8,9 @@ import { todayDateInOffice } from '@/lib/utils/date';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -18,16 +20,18 @@ export async function POST(request: NextRequest) {
   const { latitude, longitude, accuracy } = body ?? {};
 
   if (
-    typeof latitude !== 'number' || !isFinite(latitude) ||
-    typeof longitude !== 'number' || !isFinite(longitude) ||
-    typeof accuracy !== 'number' || !isFinite(accuracy)
+    typeof latitude !== 'number' ||
+    !isFinite(latitude) ||
+    typeof longitude !== 'number' ||
+    !isFinite(longitude) ||
+    typeof accuracy !== 'number' ||
+    !isFinite(accuracy)
   ) {
-    return NextResponse.json({ error: 'GPS indisponible' }, { status: 422 });
+    return NextResponse.json({ code: 'gps_unavailable', error: 'GPS indisponible' }, { status: 422 });
   }
 
   const service = createServiceClient();
 
-  // Fetch office settings + profile in parallel.
   const [{ data: settings }, { data: profile }] = await Promise.all([
     service.from('office_settings').select('*').single(),
     service.from('profiles').select('work_start_time').eq('id', user.id).single(),
@@ -40,21 +44,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
   }
 
-  // GPS accuracy check.
   if (accuracy > settings.gps_accuracy_limit_meters) {
     return NextResponse.json(
-      { error: 'Précision GPS insuffisante — réessayez près d\'une fenêtre' },
+      {
+        code: 'gps_accuracy_too_low',
+        error: `Précision GPS insuffisante (${Math.round(accuracy)} m, maximum autorisé : ${settings.gps_accuracy_limit_meters} m)`,
+        accuracy: Math.round(accuracy),
+        limit: settings.gps_accuracy_limit_meters,
+      },
       { status: 422 },
     );
   }
 
-  // Geofence check.
   const distanceM = Math.round(
     haversineDistance(latitude, longitude, settings.office_latitude, settings.office_longitude),
   );
+
   if (distanceM > settings.allowed_radius_meters) {
     return NextResponse.json(
       {
+        code: 'outside_geofence',
         error: `Vous êtes à ${distanceM} m du bureau (rayon autorisé : ${settings.allowed_radius_meters} m)`,
         distance: distanceM,
         radius: settings.allowed_radius_meters,
@@ -65,7 +74,6 @@ export async function POST(request: NextRequest) {
 
   const today = todayDateInOffice();
 
-  // Duplicate check-in guard.
   const { data: existing } = await service
     .from('attendance')
     .select('id, check_in_at')
@@ -75,7 +83,9 @@ export async function POST(request: NextRequest) {
 
   if (existing?.check_in_at) {
     const time = new Date(existing.check_in_at).toLocaleTimeString('fr-FR', {
-      hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Tunis',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Africa/Tunis',
     });
     return NextResponse.json(
       { error: `Vous avez déjà pointé votre arrivée à ${time}` },

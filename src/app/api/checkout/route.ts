@@ -7,7 +7,9 @@ import { todayDateInOffice } from '@/lib/utils/date';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -17,14 +19,18 @@ export async function POST(request: NextRequest) {
   const { latitude, longitude, accuracy } = body ?? {};
 
   if (
-    typeof latitude !== 'number' || !isFinite(latitude) ||
-    typeof longitude !== 'number' || !isFinite(longitude) ||
-    typeof accuracy !== 'number' || !isFinite(accuracy)
+    typeof latitude !== 'number' ||
+    !isFinite(latitude) ||
+    typeof longitude !== 'number' ||
+    !isFinite(longitude) ||
+    typeof accuracy !== 'number' ||
+    !isFinite(accuracy)
   ) {
-    return NextResponse.json({ error: 'GPS indisponible' }, { status: 422 });
+    return NextResponse.json({ code: 'gps_unavailable', error: 'GPS indisponible' }, { status: 422 });
   }
 
   const service = createServiceClient();
+  const today = todayDateInOffice();
 
   const [{ data: settings }, { data: existing }] = await Promise.all([
     service.from('office_settings').select('*').single(),
@@ -32,7 +38,7 @@ export async function POST(request: NextRequest) {
       .from('attendance')
       .select('id, check_in_at, check_out_at')
       .eq('user_id', user.id)
-      .eq('date', todayDateInOffice())
+      .eq('date', today)
       .maybeSingle(),
   ]);
 
@@ -42,14 +48,16 @@ export async function POST(request: NextRequest) {
 
   if (!existing?.check_in_at) {
     return NextResponse.json(
-      { error: 'Vous devez pointer votre arrivée avant le départ' },
+      { error: "Vous devez pointer votre arrivée avant le départ" },
       { status: 422 },
     );
   }
 
   if (existing.check_out_at) {
     const time = new Date(existing.check_out_at).toLocaleTimeString('fr-FR', {
-      hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Tunis',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Africa/Tunis',
     });
     return NextResponse.json(
       { error: `Vous avez déjà pointé votre départ à ${time}` },
@@ -57,21 +65,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // GPS accuracy check.
   if (accuracy > settings.gps_accuracy_limit_meters) {
     return NextResponse.json(
-      { error: 'Précision GPS insuffisante — réessayez près d\'une fenêtre' },
+      {
+        code: 'gps_accuracy_too_low',
+        error: `Précision GPS insuffisante (${Math.round(accuracy)} m, maximum autorisé : ${settings.gps_accuracy_limit_meters} m)`,
+        accuracy: Math.round(accuracy),
+        limit: settings.gps_accuracy_limit_meters,
+      },
       { status: 422 },
     );
   }
 
-  // Geofence check.
   const distanceM = Math.round(
     haversineDistance(latitude, longitude, settings.office_latitude, settings.office_longitude),
   );
+
   if (distanceM > settings.allowed_radius_meters) {
     return NextResponse.json(
       {
+        code: 'outside_geofence',
         error: `Vous êtes à ${distanceM} m du bureau (rayon autorisé : ${settings.allowed_radius_meters} m)`,
         distance: distanceM,
         radius: settings.allowed_radius_meters,
@@ -102,7 +115,7 @@ export async function POST(request: NextRequest) {
     actorId: user.id,
     action: 'checkout',
     targetUserId: user.id,
-    details: { date: todayDateInOffice(), distance_m: distanceM },
+    details: { date: today, distance_m: distanceM },
   });
 
   return NextResponse.json({ success: true });
