@@ -52,24 +52,23 @@ export function AdminSidebar() {
   const activeKey = pathToKey(pathname);
 
   return (
-    <div className="flex flex-col h-full">
-      <SideNavRail
-        items={NAV_ITEMS}
-        activeKey={activeKey}
-        brand={
-          <span className="font-bold text-lg" style={{ fontFamily: 'DM Sans, sans-serif' }}>X</span>
-        }
-      />
-      {/* Logout pinned at bottom */}
-      <form action={logout} className="mt-auto pt-3 pb-5 flex justify-center">
-        <button
-          type="submit"
-          aria-label="Déconnexion"
-          className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-navSlate text-white hover:bg-navSlateHover transition"
-        >
-          <LogOut size={18} />
-        </button>
-      </form>
-    </div>
+    <SideNavRail
+      items={NAV_ITEMS}
+      activeKey={activeKey}
+      brand={
+        <span className="font-bold text-lg" style={{ fontFamily: 'DM Sans, sans-serif' }}>X</span>
+      }
+      footer={
+        <form action={logout}>
+          <button
+            type="submit"
+            aria-label="Déconnexion"
+            className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-navSlate text-white hover:bg-navSlateHover transition"
+          >
+            <LogOut size={18} />
+          </button>
+        </form>
+      }
+    />
   );
 }

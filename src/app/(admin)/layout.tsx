@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       {/* Desktop: sidebar + content */}
       <div className="hidden md:flex h-screen">
         {/* Sidebar column */}
-        <div className="flex-shrink-0 p-3 flex">
+        <div className="flex-shrink-0 p-3 flex items-start">
           <AdminSidebar />
         </div>
         {/* Main content */}

@@ -8,6 +8,7 @@ import { formatTime, formatDate } from '@/lib/attendance/status';
 import { todayDateInOffice } from '@/lib/utils/date';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { CalendarDays, Clock, Palmtree } from 'lucide-react';
 import {
   dayOfWeekEnum,
@@ -90,7 +91,7 @@ export default async function DashboardPage() {
         <p className="text-muted text-small">Bonjour,</p>
         <h1 className="text-section font-bold text-ink tracking-tight">{firstName}</h1>
         <p className="text-caption text-muted mt-0.5 capitalize">
-          {formatInTimeZone(now, 'Africa/Tunis', 'EEEE d MMMM yyyy', { locale: undefined })}
+          {formatInTimeZone(now, 'Africa/Tunis', 'EEEE d MMMM yyyy', { locale: fr })}
         </p>
       </div>
 

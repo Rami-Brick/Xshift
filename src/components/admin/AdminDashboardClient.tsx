@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import { Users, Clock, Calendar, AlertCircle, CalendarOff } from 'lucide-react';
 import { KpiCard } from '@/design-kit/compounds/KpiCard';
 import { formatInTimeZone } from 'date-fns-tz';
+import { fr } from 'date-fns/locale';
 import type { AdminStats } from '@/types';
 
 const OFFICE_TZ = 'Africa/Tunis';
@@ -45,7 +46,7 @@ export function AdminDashboardClient({ initialStats }: { initialStats: AdminStat
   });
   const currentStats = stats ?? initialStats;
 
-  const today = formatInTimeZone(new Date(), OFFICE_TZ, 'EEEE d MMMM yyyy');
+  const today = formatInTimeZone(new Date(), OFFICE_TZ, 'EEEE d MMMM yyyy', { locale: fr });
 
   return (
     <div className="space-y-6">

@@ -29,7 +29,7 @@ export function EmployeeNav() {
       items={NAV_ITEMS}
       activeKey={activeKey}
       variant="static"
-      className="w-full justify-center"
+      className="justify-center opacity-120"
     />
   );
 }

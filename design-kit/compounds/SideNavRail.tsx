@@ -14,6 +14,7 @@ export interface SideNavRailProps<K extends string = string> {
   activeKey: K;
   onChange?: (key: K) => void;
   brand?: React.ReactNode;
+  footer?: React.ReactNode;
   className?: string;
 }
 
@@ -27,12 +28,13 @@ export function SideNavRail<K extends string = string>({
   activeKey,
   onChange,
   brand,
+  footer,
   className,
 }: SideNavRailProps<K>) {
   return (
     <aside
       className={cn(
-        'flex h-full w-20 shrink-0 flex-col items-center gap-3 rounded-[32px] bg-navDark px-3 py-5 shadow-nav',
+        'flex w-20 shrink-0 flex-col items-center gap-3 rounded-[32px] bg-navDark px-3 py-5 shadow-nav',
         className
       )}
     >
@@ -75,6 +77,7 @@ export function SideNavRail<K extends string = string>({
           </button>
         );
       })}
+      {footer && <div className="mt-3 pt-3 border-t border-navSlate flex justify-center">{footer}</div>}
     </aside>
   );
 }
