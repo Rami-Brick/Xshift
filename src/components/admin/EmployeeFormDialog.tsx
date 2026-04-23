@@ -36,7 +36,6 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
     defaultValues: isEdit
       ? {
           full_name: employee.full_name,
-          phone: employee.phone ?? '',
           work_start_time: employee.work_start_time.slice(0, 5),
           work_end_time: employee.work_end_time.slice(0, 5),
           leave_balance: employee.leave_balance,
@@ -45,9 +44,9 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
           is_active: employee.is_active,
         }
       : {
-          work_start_time: '08:30',
-          work_end_time: '17:30',
-          leave_balance: 0,
+          work_start_time: '09:00',
+          work_end_time: '18:00',
+          leave_balance: 30,
           role: 'employee',
           default_day_off: 'saturday',
         },
@@ -123,10 +122,6 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
               <input {...register('password')} type="password" className={inputCls} placeholder="••••••" />
             </Field>
           )}
-
-          <Field label="Téléphone" error={errors.phone?.message}>
-            <input {...register('phone')} className={inputCls} placeholder="+216 XX XXX XXX" />
-          </Field>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Heure d'arrivée" error={errors.work_start_time?.message}>

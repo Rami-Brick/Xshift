@@ -24,7 +24,7 @@ async function AdminEmployeesContent() {
     service
       .from('profiles')
       .select(
-        'id, full_name, email, phone, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
+        'id, full_name, email, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
       )
       .order('full_name', { ascending: true }),
   );
