@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { MapPin, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { getDeviceId, getDeviceLabel } from '@/lib/device';
 import type { Attendance } from '@/types';
@@ -97,40 +97,53 @@ export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
 
   if (done) {
     return (
-      <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-soft text-muted text-sm font-medium">
-        <MapPin size={16} />
-        Journée terminée
+      <div className="flex h-40 w-40 flex-col items-center justify-center rounded-full bg-soft text-muted shadow-softer">
+        <span className="text-sm font-semibold tracking-wide">Terminé</span>
       </div>
     );
   }
 
   const loading = phase !== 'idle';
-  const label = loading
-    ? phase === 'locating'
-      ? 'Localisation...'
-      : 'Pointage...'
-    : hasCheckedIn
-      ? 'Pointer le départ'
-      : "Pointer l'arrivée";
-
-  const Icon = loading ? Loader2 : hasCheckedIn ? LogOut : LogIn;
+  const isCheckOut = hasCheckedIn;
+  const actionLabel = isCheckOut ? 'Pointer le départ' : "Pointer l'arrivée";
 
   return (
-    <button
-      type="button"
-      onClick={handlePress}
-      disabled={loading}
-      className={cn(
-        'flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition',
-        'disabled:opacity-60 disabled:cursor-not-allowed',
-        hasCheckedIn
-          ? 'bg-ink text-white hover:opacity-90'
-          : 'bg-brand text-white hover:opacity-90',
+    <div className="relative flex items-center justify-center">
+      {/* Pulsing ring — only when idle and not checked in yet */}
+      {!loading && !isCheckOut && (
+        <span className="absolute inline-flex h-40 w-40 rounded-full bg-brand opacity-15 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite]" />
       )}
-    >
-      <Icon size={18} className={loading ? 'animate-spin' : ''} />
-      {label}
-    </button>
+
+      <button
+        type="button"
+        onClick={handlePress}
+        disabled={loading}
+        aria-label={actionLabel}
+        aria-busy={loading}
+        className={cn(
+          'relative flex h-40 w-40 flex-col items-center justify-center gap-1.5 overflow-hidden rounded-full transition-transform duration-150',
+          'hover:scale-[1.03] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60',
+          isCheckOut
+            ? [
+                'shadow-[0_20px_48px_rgba(220,38,38,0.30),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-12px_24px_rgba(120,0,0,0.18)]',
+                'before:absolute before:inset-0 before:rounded-full before:bg-[radial-gradient(circle_at_32%_16%,rgba(255,255,255,0.22),transparent_28%),linear-gradient(170deg,#ef4444_0%,#dc2626_52%,#b91c1c_100%)]',
+              ]
+            : [
+                'shadow-[0_20px_48px_rgba(30,83,255,0.32),inset_0_1px_0_rgba(255,255,255,0.40),inset_0_-12px_28px_rgba(5,25,90,0.16)]',
+                'before:absolute before:inset-0 before:rounded-full before:bg-[radial-gradient(circle_at_34%_16%,rgba(255,255,255,0.22),transparent_28%),linear-gradient(170deg,#2a56e8_0%,#1340d4_52%,#0d30b8_100%)]',
+              ],
+          'after:absolute after:left-[18%] after:top-[10%] after:h-[28%] after:w-[62%] after:rounded-full after:bg-white/10 after:blur-xl',
+        )}
+      >
+        {loading ? (
+          <Loader2 size={22} className="relative z-10 animate-spin text-white" />
+        ) : (
+          <span className="relative z-10 text-lg font-bold tracking-tight text-white leading-none">
+            Pointer
+          </span>
+        )}
+      </button>
+    </div>
   );
 }
 
