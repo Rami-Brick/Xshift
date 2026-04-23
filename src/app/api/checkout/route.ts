@@ -68,29 +68,45 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const distanceM = Math.round(
+    haversineDistance(latitude, longitude, settings.office_latitude, settings.office_longitude),
+  );
+  const roundedAccuracy = Math.round(accuracy);
+
   if (accuracy > settings.gps_accuracy_limit_meters) {
     return NextResponse.json(
       {
         code: 'gps_accuracy_too_low',
-        error: `Précision GPS insuffisante (${Math.round(accuracy)} m, maximum autorisé : ${settings.gps_accuracy_limit_meters} m)`,
-        accuracy: Math.round(accuracy),
+        error: `Précision GPS insuffisante (${roundedAccuracy} m, maximum autorisé : ${settings.gps_accuracy_limit_meters} m)`,
+        accuracy: roundedAccuracy,
         limit: settings.gps_accuracy_limit_meters,
+        distance: distanceM,
+        radius: settings.allowed_radius_meters,
       },
       { status: 422 },
     );
   }
 
-  const distanceM = Math.round(
-    haversineDistance(latitude, longitude, settings.office_latitude, settings.office_longitude),
-  );
-
   if (distanceM > settings.allowed_radius_meters) {
+    console.warn('Attendance check-out rejected outside geofence', {
+      user_id: user.id,
+      distance_m: distanceM,
+      radius_m: settings.allowed_radius_meters,
+      accuracy_m: roundedAccuracy,
+      gps_accuracy_limit_m: settings.gps_accuracy_limit_meters,
+      latitude: roundCoordinate(latitude),
+      longitude: roundCoordinate(longitude),
+      user_agent: request.headers.get('user-agent'),
+    });
+
     return NextResponse.json(
       {
         code: 'outside_geofence',
         error: `Vous êtes à ${distanceM} m du bureau (rayon autorisé : ${settings.allowed_radius_meters} m)`,
         distance: distanceM,
         radius: settings.allowed_radius_meters,
+        accuracy: roundedAccuracy,
+        limit: settings.gps_accuracy_limit_meters,
       },
       { status: 422 },
     );
@@ -119,8 +135,12 @@ export async function POST(request: NextRequest) {
     actorId: user.id,
     action: 'checkout',
     targetUserId: user.id,
-    details: { date: today, distance_m: distanceM },
+    details: { date: today, distance_m: distanceM, accuracy_m: roundedAccuracy },
   });
 
   return NextResponse.json({ success: true });
+}
+
+function roundCoordinate(value: number): number {
+  return Math.round(value * 100_000) / 100_000;
 }

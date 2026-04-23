@@ -23,6 +23,9 @@ type CheckInErrorResponse = {
   radius?: number;
 };
 
+const GPS_SAMPLE_TIMEOUT_MS = 14_000;
+const GPS_EARLY_ACCEPT_ACCURACY_M = 50;
+
 export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
   const [phase, setPhase] = useState<Phase>('idle');
 
@@ -35,20 +38,14 @@ export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
 
     let position: GeolocationPosition;
     try {
-      position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10_000,
-          maximumAge: 0,
-        });
-      });
+      position = await getBestGeolocation();
     } catch (err: unknown) {
       setPhase('idle');
       const code = (err as GeolocationPositionError)?.code;
       if (code === GeolocationPositionError.PERMISSION_DENIED) {
         toast.error('Accès à la localisation refusé');
       } else if (code === GeolocationPositionError.TIMEOUT) {
-        toast.error('GPS indisponible - délai dépassé');
+        toast.error('GPS indisponible - réessayez près d’une fenêtre');
       } else {
         toast.error('GPS indisponible');
       }
@@ -147,13 +144,75 @@ export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
   );
 }
 
+function getBestGeolocation(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation unavailable'));
+      return;
+    }
+
+    let bestPosition: GeolocationPosition | null = null;
+    let lastError: GeolocationPositionError | null = null;
+    let settled = false;
+    let watchId: number | null = null;
+
+    const cleanup = () => {
+      settled = true;
+      window.clearTimeout(timeoutId);
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+
+    const resolveWithBest = () => {
+      if (settled) return;
+      if (bestPosition) {
+        cleanup();
+        resolve(bestPosition);
+        return;
+      }
+
+      cleanup();
+      reject(lastError ?? ({ code: GeolocationPositionError.TIMEOUT } as GeolocationPositionError));
+    };
+
+    const timeoutId = window.setTimeout(resolveWithBest, GPS_SAMPLE_TIMEOUT_MS);
+
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+          bestPosition = position;
+        }
+
+        if (position.coords.accuracy <= GPS_EARLY_ACCEPT_ACCURACY_M) {
+          resolveWithBest();
+        }
+      },
+      (error) => {
+        lastError = error;
+
+        if (error.code === GeolocationPositionError.PERMISSION_DENIED) {
+          cleanup();
+          reject(error);
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: GPS_SAMPLE_TIMEOUT_MS,
+        maximumAge: 0,
+      },
+    );
+  });
+}
+
 function formatCheckInError(data: CheckInErrorResponse): string {
-  if (data.code === 'gps_accuracy_too_low' && data.accuracy && data.limit) {
+  if (data.code === 'gps_accuracy_too_low' && typeof data.accuracy === 'number' && data.limit) {
     return `Précision GPS insuffisante (${data.accuracy} m, maximum autorisé : ${data.limit} m)`;
   }
 
   if (data.code === 'outside_geofence' && data.distance && data.radius) {
-    return `Vous êtes à ${data.distance} m du bureau (rayon autorisé : ${data.radius} m)`;
+    const accuracyText = typeof data.accuracy === 'number' ? `, précision GPS : ${data.accuracy} m` : '';
+    return `Vous êtes à ${data.distance} m du bureau (rayon autorisé : ${data.radius} m${accuracyText})`;
   }
 
   return data.error ?? 'Erreur lors du pointage';
