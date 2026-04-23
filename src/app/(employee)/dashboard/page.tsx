@@ -57,18 +57,18 @@ export default async function DashboardPage() {
   const isDayOff = effective === dayOfWeekEnum(now);
 
   return (
-    <div className="px-4 pt-10 pb-2">
-      <div className="min-h-[190px] flex flex-col items-center justify-center text-center">
-        <p className="text-small font-medium text-brand">Bonjour</p>
+    <div className="px-4 pt-7 pb-2">
+      <div className="min-h-[150px] flex flex-col items-center justify-center text-center">
+        <p className="text-small font-semibold text-brand">Bonjour</p>
         <h1 className="mt-2 text-displayXl font-bold text-ink leading-none">
           {firstName}
         </h1>
-        <p className="text-small text-muted mt-4 capitalize">
+        <p className="text-small text-muted mt-3 capitalize">
           {formatInTimeZone(now, 'Africa/Tunis', 'EEEE d MMMM yyyy', { locale: fr })}
         </p>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-4">
         <TodayCard
           initialToday={todayRecord as Attendance | null}
           gracePeriodMinutes={settings?.grace_period_minutes ?? 10}

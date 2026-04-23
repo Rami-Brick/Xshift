@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginInput } from '@/lib/validation/auth';
@@ -37,11 +38,14 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex items-center justify-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-brand flex items-center justify-center mr-3">
-            <span className="text-white font-bold text-xl" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-              X
-            </span>
-          </div>
+          <Image
+            src="/Xshift.svg"
+            alt="Xshift"
+            width={48}
+            height={48}
+            priority
+            className="mr-3 h-12 w-12 rounded-xl object-contain shadow-softer"
+          />
           <div>
             <p className="text-xl font-bold text-ink tracking-tight">Xshift</p>
             <p className="text-xs text-muted">Gestion des présences</p>

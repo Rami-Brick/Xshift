@@ -12,14 +12,14 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
+      "src": "/Xshift.svg",
+      "sizes": "1024x1024",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-maskable.svg",
-      "sizes": "any",
+      "src": "/Xshift.svg",
+      "sizes": "1024x1024",
       "type": "image/svg+xml",
       "purpose": "maskable"
     }

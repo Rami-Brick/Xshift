@@ -46,15 +46,14 @@ export function TodayCard({ initialToday, gracePeriodMinutes, isDayOff = false }
   }
 
   return (
-    <Card tone="surface" className="p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-small font-medium text-muted uppercase tracking-wide">
-          Aujourd&apos;hui
-        </span>
-        {today?.status && (
+    <Card tone="surface" className="p-5 pb-6">
+      <div className="flex min-h-7 items-center justify-center gap-2">
+        {today?.status ? (
           <Chip variant={STATUS_TONE[today.status] ?? 'neutral'}>
             {STATUS_LABEL[today.status] ?? today.status}
           </Chip>
+        ) : (
+          <span className="sr-only">Pointage du jour</span>
         )}
         {today?.forgot_checkout && (
           <span className="flex items-center gap-1 text-small text-trend-down font-medium">
@@ -64,11 +63,23 @@ export function TodayCard({ initialToday, gracePeriodMinutes, isDayOff = false }
         )}
       </div>
 
-      {/* Times */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-canvas rounded-xl p-3">
+      <div className="mt-3 flex justify-center">
+        {isDayOff ? (
+          <div className="flex h-36 w-36 flex-col items-center justify-center rounded-full bg-canvas text-center shadow-softer">
+            <p className="text-cardTitle font-bold text-ink">Repos</p>
+            <p className="mt-1 max-w-24 text-caption text-muted">
+              Pas de pointage
+            </p>
+          </div>
+        ) : (
+          <CheckInButton today={today} onSuccess={refresh} />
+        )}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="bg-canvas rounded-xl p-3 text-center">
           <p className="text-caption text-muted mb-1">Arrivée</p>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-center gap-1.5">
             <Clock size={14} className="text-brand" />
             <span className="text-cardTitle font-bold text-ink">
               {today?.check_in_at ? formatTime(today.check_in_at) : '—'}
@@ -90,9 +101,10 @@ export function TodayCard({ initialToday, gracePeriodMinutes, isDayOff = false }
             </p>
           )}
         </div>
-        <div className="bg-canvas rounded-xl p-3">
+
+        <div className="bg-canvas rounded-xl p-3 text-center">
           <p className="text-caption text-muted mb-1">Départ</p>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-center gap-1.5">
             <Clock size={14} className="text-muted" />
             <span className="text-cardTitle font-bold text-ink">
               {today?.check_out_at ? formatTime(today.check_out_at) : '—'}
@@ -100,17 +112,6 @@ export function TodayCard({ initialToday, gracePeriodMinutes, isDayOff = false }
           </div>
         </div>
       </div>
-
-      {isDayOff ? (
-        <div className="bg-canvas rounded-xl p-4 text-center">
-          <p className="text-cardTitle font-bold text-ink">Jour de repos</p>
-          <p className="text-caption text-muted mt-1">
-            Pas de pointage nécessaire aujourd&apos;hui.
-          </p>
-        </div>
-      ) : (
-        <CheckInButton today={today} onSuccess={refresh} />
-      )}
     </Card>
   );
 }

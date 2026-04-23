@@ -11,9 +11,9 @@ export const config = {
      * Match all request paths except:
      * - _next/static (static files)
      * - _next/image (image optimization)
-     * - favicon, manifest, icons
+     * - favicon, manifest, icons, logo
      * - api routes (handlers enforce auth themselves)
      */
-    '/((?!_next/static|_next/image|favicon.svg|manifest.webmanifest|icons/|api/).*)',
+    '/((?!_next/static|_next/image|favicon.svg|Xshift.svg|manifest.webmanifest|icons/|api/).*)',
   ],
 };
