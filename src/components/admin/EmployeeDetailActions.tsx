@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, UserX } from 'lucide-react';
+import { Pencil, UserX, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmployeeFormDialog } from './EmployeeFormDialog';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
 import type { Profile } from '@/types';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 
 export function EmployeeDetailActions({ employee }: Props) {
   const [showEdit, setShowEdit] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const router = useRouter();
 
@@ -50,6 +52,14 @@ export function EmployeeDetailActions({ employee }: Props) {
           <Pencil size={14} />
           Modifier
         </button>
+        <button
+          type="button"
+          onClick={() => setShowPassword(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface shadow-softer text-sm font-medium text-ink hover:bg-soft transition"
+        >
+          <KeyRound size={14} />
+          Mot de passe
+        </button>
         {employee.is_active && (
           <button
             type="button"
@@ -71,6 +81,14 @@ export function EmployeeDetailActions({ employee }: Props) {
           employee={employee}
           onClose={() => setShowEdit(false)}
           onSuccess={handleUpdated}
+        />
+      )}
+
+      {showPassword && (
+        <ChangePasswordDialog
+          employeeId={employee.id}
+          employeeName={employee.full_name}
+          onClose={() => setShowPassword(false)}
         />
       )}
     </>
