@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Clock, Users, CalendarDays, CalendarOff, BarChart2,
@@ -41,6 +42,15 @@ export function AdminSidebar() {
     <SideNavRail
       items={NAV_ITEMS}
       activeKey={activeKey}
+      brand={
+        <Image
+          src="/Xshift.svg"
+          alt="Xshift"
+          width={40}
+          height={40}
+          className="h-10 w-10 rounded-xl object-contain"
+        />
+      }
     />
   );
 }

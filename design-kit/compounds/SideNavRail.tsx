@@ -57,17 +57,14 @@ export function SideNavRail<K extends string = string>({
 
         const label = (
           <span className={cn(
-            'text-sm font-medium text-white whitespace-nowrap overflow-hidden transition-all duration-200',
+            'text-sm font-medium text-white whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out',
             expanded ? 'max-w-[120px] opacity-100 ml-3' : 'max-w-0 opacity-0 ml-0'
           )}>
             {item.label}
           </span>
         );
 
-        const rowClass = cn(
-          'flex items-center',
-          expanded ? 'w-full' : 'justify-center'
-        );
+        const rowClass = 'flex items-center w-full';
 
         if (item.href) {
           return (

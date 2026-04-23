@@ -35,6 +35,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/icons') ||
     pathname === '/favicon.svg' ||
+    pathname === '/Xshift.svg' ||
     pathname === '/manifest.webmanifest';
 
   // Unauthenticated → /login (except public paths).

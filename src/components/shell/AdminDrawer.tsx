@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -51,7 +52,13 @@ export function AdminMobileHeader() {
       {/* Top bar */}
       <header className="flex items-center justify-between px-4 py-3 bg-navDark text-white shadow-nav">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-lg text-white">X</span>
+          <Image
+            src="/Xshift.svg"
+            alt="Xshift"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-lg object-contain"
+          />
           <span className="font-semibold text-sm text-white/80">Xshift Admin</span>
         </div>
         <button
@@ -81,7 +88,16 @@ export function AdminMobileHeader() {
         )}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-navSlate">
-          <span className="font-bold text-white text-lg">Xshift Admin</span>
+          <div className="flex items-center gap-3">
+            <Image
+              src="/Xshift.svg"
+              alt="Xshift"
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-lg object-contain"
+            />
+            <span className="font-bold text-white text-lg">Xshift Admin</span>
+          </div>
           <button
             type="button"
             aria-label="Fermer le menu"

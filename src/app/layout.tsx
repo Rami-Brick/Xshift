@@ -9,8 +9,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   applicationName: 'Xshift',
   icons: {
-    icon: '/favicon.svg',
-    apple: '/icons/icon-192.png',
+    icon: '/Xshift.svg',
+    shortcut: '/Xshift.svg',
+    apple: '/Xshift.svg',
   },
   appleWebApp: {
     capable: true,
