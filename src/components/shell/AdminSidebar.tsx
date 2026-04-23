@@ -2,42 +2,28 @@
 
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Users, Clock, CalendarDays, CalendarOff,
-  BarChart2, Settings, ScrollText, LogOut,
+  LayoutDashboard, Clock, Users, CalendarDays, CalendarOff, BarChart2,
 } from 'lucide-react';
 import { SideNavRail, type SideNavItemSpec } from '@/design-kit/compounds/SideNavRail';
-import { logout } from '@/lib/auth/actions';
 
-type NavKey =
-  | 'dashboard'
-  | 'employees'
-  | 'attendance'
-  | 'leave'
-  | 'day-off'
-  | 'reports'
-  | 'settings'
-  | 'logs';
+type NavKey = 'dashboard' | 'attendance' | 'employees' | 'leave' | 'day-off' | 'reports';
 
 const NAV_ITEMS: SideNavItemSpec<NavKey>[] = [
   { key: 'dashboard',  icon: LayoutDashboard, label: 'Tableau de bord', href: '/admin/dashboard' },
-  { key: 'employees',  icon: Users,           label: 'Employés', href: '/admin/employees' },
-  { key: 'attendance', icon: Clock,           label: 'Présences', href: '/admin/attendance' },
-  { key: 'leave',      icon: CalendarDays,    label: 'Congés', href: '/admin/leave' },
-  { key: 'day-off',    icon: CalendarOff,     label: 'Jours de repos', href: '/admin/day-off' },
-  { key: 'reports',    icon: BarChart2,        label: 'Rapports', href: '/admin/reports' },
-  { key: 'settings',   icon: Settings,         label: 'Paramètres', href: '/admin/settings' },
-  { key: 'logs',       icon: ScrollText,       label: 'Journal', href: '/admin/logs' },
+  { key: 'attendance', icon: Clock,           label: 'Présences',       href: '/admin/attendance' },
+  { key: 'employees',  icon: Users,           label: 'Employés',        href: '/admin/employees' },
+  { key: 'leave',      icon: CalendarDays,    label: 'Congés',          href: '/admin/leave' },
+  { key: 'day-off',    icon: CalendarOff,     label: 'Jours de repos',  href: '/admin/day-off' },
+  { key: 'reports',    icon: BarChart2,       label: 'Rapports',        href: '/admin/reports' },
 ];
 
 const KEY_TO_PATH: Record<NavKey, string> = {
   dashboard:  '/admin/dashboard',
-  employees:  '/admin/employees',
   attendance: '/admin/attendance',
+  employees:  '/admin/employees',
   leave:      '/admin/leave',
   'day-off':  '/admin/day-off',
   reports:    '/admin/reports',
-  settings:   '/admin/settings',
-  logs:       '/admin/logs',
 };
 
 function pathToKey(pathname: string): NavKey {
@@ -55,20 +41,6 @@ export function AdminSidebar() {
     <SideNavRail
       items={NAV_ITEMS}
       activeKey={activeKey}
-      brand={
-        <span className="font-bold text-lg" style={{ fontFamily: 'DM Sans, sans-serif' }}>X</span>
-      }
-      footer={
-        <form action={logout}>
-          <button
-            type="submit"
-            aria-label="Déconnexion"
-            className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-navSlate text-white hover:bg-navSlateHover transition"
-          >
-            <LogOut size={18} />
-          </button>
-        </form>
-      }
     />
   );
 }
