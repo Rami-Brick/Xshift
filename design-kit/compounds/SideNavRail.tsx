@@ -16,6 +16,7 @@ export interface SideNavRailProps<K extends string = string> {
   items: SideNavItemSpec<K>[];
   activeKey: K;
   onChange?: (key: K) => void;
+  brand?: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
 }
@@ -24,6 +25,7 @@ export function SideNavRail<K extends string = string>({
   items,
   activeKey,
   onChange,
+  brand,
   footer,
   className,
 }: SideNavRailProps<K>) {
@@ -39,6 +41,7 @@ export function SideNavRail<K extends string = string>({
         className
       )}
     >
+      {brand && <div className="mb-2 flex h-10 w-10 items-center justify-center text-white">{brand}</div>}
       {items.map((item) => {
         const Icon = item.icon;
         const active = item.key === activeKey;
