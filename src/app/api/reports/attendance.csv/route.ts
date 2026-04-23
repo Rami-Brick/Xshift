@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireAdmin } from '@/lib/auth/guards';
+import { requireStaff } from '@/lib/auth/guards';
 import { formatInTimeZone } from 'date-fns-tz';
 
 const OFFICE_TZ = 'Africa/Tunis';
@@ -15,7 +15,7 @@ function escapeCSV(val: string | number | null | undefined): string {
 }
 
 export async function GET(request: NextRequest) {
-  await requireAdmin();
+  await requireStaff();
   const service = createServiceClient();
 
   const { searchParams } = new URL(request.url);

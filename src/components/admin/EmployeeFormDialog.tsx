@@ -5,17 +5,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
+import { canManageEmployeeAccounts } from '@/lib/auth/roles';
 import { createEmployeeSchema, updateEmployeeSchema, type CreateEmployeeInput } from '@/lib/validation/employee';
-import type { Profile } from '@/types';
+import type { Profile, Role } from '@/types';
 
 interface CreateProps {
   employee?: undefined;
+  viewerRole: Role;
   onClose: () => void;
   onSuccess: (profile: Profile) => void;
 }
 
 interface EditProps {
   employee: Profile;
+  viewerRole: Role;
   onClose: () => void;
   onSuccess: (profile: Profile) => void;
 }
@@ -24,8 +27,10 @@ type Props = CreateProps | EditProps;
 
 type FormInput = CreateEmployeeInput & { is_active?: boolean };
 
-export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
+export function EmployeeFormDialog({ employee, viewerRole, onClose, onSuccess }: Props) {
   const isEdit = !!employee;
+  const canManageAccounts = canManageEmployeeAccounts(viewerRole);
+  const canEditIdentity = canManageAccounts || !isEdit;
 
   const {
     register,
@@ -104,20 +109,21 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
-          {/* Full name */}
-          <Field label="Nom complet" error={errors.full_name?.message}>
-            <input {...register('full_name')} className={inputCls} placeholder="Prénom Nom" />
-          </Field>
+          {canEditIdentity && (
+            <Field label="Nom complet" error={errors.full_name?.message}>
+              <input {...register('full_name')} className={inputCls} placeholder="Prénom Nom" />
+            </Field>
+          )}
 
           {/* Email — only on create */}
-          {!isEdit && (
+          {!isEdit && canManageAccounts && (
             <Field label="Email" error={(errors as Record<string, { message?: string }>).email?.message}>
               <input {...register('email')} type="email" className={inputCls} placeholder="email@exemple.com" />
             </Field>
           )}
 
           {/* Password — only on create */}
-          {!isEdit && (
+          {!isEdit && canManageAccounts && (
             <Field label="Mot de passe temporaire" error={(errors as Record<string, { message?: string }>).password?.message}>
               <input {...register('password')} type="password" className={inputCls} placeholder="••••••" />
             </Field>
@@ -132,31 +138,36 @@ export function EmployeeFormDialog({ employee, onClose, onSuccess }: Props) {
             </Field>
           </div>
 
-          <Field label="Jour de repos par défaut" error={errors.default_day_off?.message}>
-            <select {...register('default_day_off')} className={inputCls}>
-              <option value="monday">Lundi</option>
-              <option value="tuesday">Mardi</option>
-              <option value="wednesday">Mercredi</option>
-              <option value="thursday">Jeudi</option>
-              <option value="friday">Vendredi</option>
-              <option value="saturday">Samedi</option>
-              <option value="sunday">Dimanche</option>
-            </select>
-          </Field>
+          {canManageAccounts && (
+            <Field label="Jour de repos par défaut" error={errors.default_day_off?.message}>
+              <select {...register('default_day_off')} className={inputCls}>
+                <option value="monday">Lundi</option>
+                <option value="tuesday">Mardi</option>
+                <option value="wednesday">Mercredi</option>
+                <option value="thursday">Jeudi</option>
+                <option value="friday">Vendredi</option>
+                <option value="saturday">Samedi</option>
+                <option value="sunday">Dimanche</option>
+              </select>
+            </Field>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Solde congés (j)" error={errors.leave_balance?.message}>
               <input {...register('leave_balance')} type="number" min={0} className={inputCls} />
             </Field>
-            <Field label="Rôle" error={errors.role?.message}>
-              <select {...register('role')} className={inputCls}>
-                <option value="employee">Employé</option>
-                <option value="admin">Admin</option>
-              </select>
-            </Field>
+            {canManageAccounts && (
+              <Field label="Rôle" error={errors.role?.message}>
+                <select {...register('role')} className={inputCls}>
+                  <option value="employee">Employé</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </Field>
+            )}
           </div>
 
-          {isEdit && (
+          {isEdit && canManageAccounts && (
             <label className="flex items-center gap-2 cursor-pointer">
               <input {...register('is_active')} type="checkbox" className="rounded" />
               <span className="text-sm text-ink">Compte actif</span>

@@ -58,6 +58,14 @@ where id = '<paste-uuid-here>';
 
 You should now be able to log into the app at `/login` with that admin account and access `/admin/*`.
 
+If you want to create a manager account later, update the profile role the same way:
+
+```sql
+update public.profiles
+set role = 'manager'
+where id = '<paste-uuid-here>';
+```
+
 ## 5. Deploy to Vercel
 
 1. Push the repo to GitHub.

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireAdmin } from '@/lib/auth/guards';
+import { requireAdmin, requireStaff } from '@/lib/auth/guards';
 import { updateAttendanceSchema } from '@/lib/validation/attendance';
 import { logActivity } from '@/lib/activity/log';
 
@@ -9,7 +9,7 @@ interface RouteParams {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const { userId: actorId } = await requireAdmin();
+  const { userId: actorId } = await requireStaff();
   const { id } = await params;
   const service = createServiceClient();
 

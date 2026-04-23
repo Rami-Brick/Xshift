@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation';
 import { requireUserCached } from '@/lib/auth/guards';
+import { isStaffRole } from '@/lib/auth/roles';
 import { EmployeeNav } from '@/components/shell/EmployeeNav';
 import type { ReactNode } from 'react';
 
 export default async function EmployeeLayout({ children }: { children: ReactNode }) {
   const { profile } = await requireUserCached();
 
-  if (profile.role === 'admin') {
+  if (isStaffRole(profile.role)) {
     redirect('/admin/dashboard');
   }
 

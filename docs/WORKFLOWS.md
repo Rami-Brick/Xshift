@@ -7,7 +7,7 @@
 3. Admin creates employee accounts via `/admin/employees` -> server creates the auth user with a temporary password chosen by the admin, then writes the employee profile fields. Because the database auth trigger creates a minimal profile automatically, this profile write should be an update/upsert in code.
 4. Admin communicates the temporary password to the employee directly.
 5. Employee signs in at `/login`.
-6. The app fetches the profile role server-side and redirects: admin → `/admin/dashboard`, employee → `/dashboard`.
+6. The app fetches the profile role server-side and redirects: admin/manager → `/admin/dashboard`, employee → `/dashboard`.
 
 Password reset for MVP: admin re-issues a new temporary password from the employee edit dialog.
 

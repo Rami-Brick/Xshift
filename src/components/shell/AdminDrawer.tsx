@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { logout } from '@/lib/auth/actions';
+import { canAccessLogs, canAccessSettings, staffRoleLabel } from '@/lib/auth/roles';
+import type { Role } from '@/types';
 
 type NavKey =
   | 'dashboard'
@@ -43,9 +45,18 @@ const KEY_TO_PATH: Record<NavKey, string> = {
   logs:       '/admin/logs',
 };
 
-export function AdminMobileHeader() {
+interface AdminMobileHeaderProps {
+  role: Role;
+}
+
+export function AdminMobileHeader({ role }: AdminMobileHeaderProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const navItems = NAV_ITEMS.filter(({ key }) => {
+    if (key === 'settings') return canAccessSettings(role);
+    if (key === 'logs') return canAccessLogs(role);
+    return true;
+  });
 
   return (
     <>
@@ -59,7 +70,7 @@ export function AdminMobileHeader() {
             height={32}
             className="h-8 w-8 rounded-lg object-contain"
           />
-          <span className="font-semibold text-sm text-white/80">Xshift Admin</span>
+          <span className="font-semibold text-sm text-white/80">Xshift {staffRoleLabel(role)}</span>
         </div>
         <button
           type="button"
@@ -96,7 +107,7 @@ export function AdminMobileHeader() {
               height={36}
               className="h-9 w-9 rounded-lg object-contain"
             />
-            <span className="font-bold text-white text-lg">Xshift Admin</span>
+            <span className="font-bold text-white text-lg">Xshift {staffRoleLabel(role)}</span>
           </div>
           <button
             type="button"
@@ -109,7 +120,7 @@ export function AdminMobileHeader() {
         </div>
 
         <nav className="flex flex-col gap-1 p-3 flex-1">
-          {NAV_ITEMS.map(({ key, icon: Icon, label }) => {
+          {navItems.map(({ key, icon: Icon, label }) => {
             const active = pathname.startsWith(KEY_TO_PATH[key]);
             return (
               <Link

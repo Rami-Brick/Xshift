@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireAdmin } from '@/lib/auth/guards';
+import { requireStaff } from '@/lib/auth/guards';
 import { adminLeaveSchema } from '@/lib/validation/leave';
 import { logActivity } from '@/lib/activity/log';
 import { eachDayOfInterval, parseISO } from 'date-fns';
@@ -9,7 +9,7 @@ const LEAVE_SELECT =
   'id, user_id, start_date, end_date, type, status, reason, admin_note, deduct_balance, created_at, updated_at, profiles!leave_requests_user_id_fkey(id, full_name, email)';
 
 export async function GET(request: NextRequest) {
-  await requireAdmin();
+  await requireStaff();
   const service = createServiceClient();
   const { searchParams } = new URL(request.url);
 
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId: actorId } = await requireAdmin();
+  const { userId: actorId } = await requireStaff();
   const service = createServiceClient();
 
   const body = await request.json().catch(() => null);

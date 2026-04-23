@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireAdmin } from '@/lib/auth/guards';
+import { requireAdmin, requireStaff } from '@/lib/auth/guards';
+import { canManageEmployeeAccounts } from '@/lib/auth/roles';
 import { createEmployeeSchema } from '@/lib/validation/employee';
 import { logActivity } from '@/lib/activity/log';
 
 export async function GET(request: NextRequest) {
-  const { userId } = await requireAdmin();
+  const { userId, profile } = await requireStaff();
   void userId;
 
   const service = createServiceClient();
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
     )
     .order('full_name', { ascending: true });
 
+  if (!canManageEmployeeAccounts(profile.role)) query = query.neq('role', 'admin');
   if (activeOnly) query = query.eq('is_active', true);
   if (search) query = query.ilike('full_name', `%${search}%`);
 

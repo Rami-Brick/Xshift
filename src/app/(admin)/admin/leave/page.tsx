@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
+import { requireStaffCached } from '@/lib/auth/guards';
+import { canDeleteLeave } from '@/lib/auth/roles';
 import { timeAsync } from '@/lib/perf/timing';
 import { AdminLeaveTable } from '@/components/leave/AdminLeaveTable';
 import type { LeaveRequestListItem, Profile } from '@/types';
@@ -16,6 +18,7 @@ export default function AdminLeavePage() {
 }
 
 async function AdminLeaveContent() {
+  const { profile } = await requireStaffCached();
   const service = createServiceClient();
 
   const [leaveResult, employeesResult] = await timeAsync('page.admin.leave.data', () => Promise.all([
@@ -35,7 +38,7 @@ async function AdminLeaveContent() {
   })) as LeaveRequestListItem[];
   const employees = (employeesResult.data ?? []) as Pick<Profile, 'id' | 'full_name'>[];
 
-  return <AdminLeaveTable initialRequests={requests} employees={employees} />;
+  return <AdminLeaveTable initialRequests={requests} employees={employees} canDelete={canDeleteLeave(profile.role)} />;
 }
 
 function LeaveTableSkeleton() {

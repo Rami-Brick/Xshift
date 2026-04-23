@@ -35,6 +35,7 @@ interface AttendanceTableProps {
   employees: Pick<Profile, 'id' | 'full_name' | 'work_start_time'>[];
   initialFilters: Filters;
   gracePeriodMinutes: number;
+  canDelete: boolean;
 }
 
 function buildSuspectDevices(records: AttendanceListItem[]): Set<string> {
@@ -52,7 +53,7 @@ function buildSuspectDevices(records: AttendanceListItem[]): Set<string> {
   return suspects;
 }
 
-export function AttendanceTable({ initialRecords, employees, initialFilters, gracePeriodMinutes }: AttendanceTableProps) {
+export function AttendanceTable({ initialRecords, employees, initialFilters, gracePeriodMinutes, canDelete }: AttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceListItem[]>(initialRecords);
   const suspectDevices = useMemo(() => buildSuspectDevices(records), [records]);
   const [filters, setFilters] = useState<Filters>(initialFilters);
@@ -239,14 +240,16 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
                         >
                           <Pencil size={14} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(row)}
-                          className="p-1.5 rounded-lg text-trend-down hover:bg-trend-down/10 transition"
-                          aria-label="Supprimer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(row)}
+                            className="p-1.5 rounded-lg text-trend-down hover:bg-trend-down/10 transition"
+                            aria-label="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

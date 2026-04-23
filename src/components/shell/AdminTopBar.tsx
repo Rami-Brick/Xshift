@@ -4,12 +4,15 @@ import { useState, useRef, useEffect } from 'react';
 import { Settings, ScrollText, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { logout } from '@/lib/auth/actions';
+import { canAccessLogs, canAccessSettings, staffRoleLabel } from '@/lib/auth/roles';
+import type { Role } from '@/types';
 
 interface AdminTopBarProps {
   fullName: string;
+  role: Role;
 }
 
-export function AdminTopBar({ fullName }: AdminTopBarProps) {
+export function AdminTopBar({ fullName, role }: AdminTopBarProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -45,25 +48,29 @@ export function AdminTopBar({ fullName }: AdminTopBarProps) {
           <div className="absolute right-0 top-11 z-50 w-48 rounded-2xl bg-white shadow-nav border border-soft overflow-hidden">
             <div className="px-4 py-3 border-b border-soft">
               <p className="text-sm font-semibold text-ink truncate">{fullName}</p>
-              <p className="text-xs text-muted">Administrateur</p>
+              <p className="text-xs text-muted">{staffRoleLabel(role)}</p>
             </div>
             <div className="py-1">
-              <Link
-                href="/admin/settings"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition"
-              >
-                <Settings size={15} className="text-muted" />
-                Paramètres
-              </Link>
-              <Link
-                href="/admin/logs"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition"
-              >
-                <ScrollText size={15} className="text-muted" />
-                Journal
-              </Link>
+              {canAccessSettings(role) && (
+                <Link
+                  href="/admin/settings"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition"
+                >
+                  <Settings size={15} className="text-muted" />
+                  Paramètres
+                </Link>
+              )}
+              {canAccessLogs(role) && (
+                <Link
+                  href="/admin/logs"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition"
+                >
+                  <ScrollText size={15} className="text-muted" />
+                  Journal
+                </Link>
+              )}
             </div>
             <div className="py-1 border-t border-soft">
               <form action={logout}>

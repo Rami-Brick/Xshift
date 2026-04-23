@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
+import { requireStaffCached } from '@/lib/auth/guards';
+import { canDeleteAttendance } from '@/lib/auth/roles';
 import { timeAsync } from '@/lib/perf/timing';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -43,6 +45,7 @@ async function AdminAttendanceContent({
   start: string;
   end: string;
 }) {
+  const { profile } = await requireStaffCached();
   const service = createServiceClient();
 
   const [attendanceResult, employeesResult, settingsResult] = await timeAsync('page.admin.attendance.data', () => Promise.all([
@@ -79,6 +82,7 @@ async function AdminAttendanceContent({
       employees={employees}
       initialFilters={{ start, end, user_id: filters.user_id, status: filters.status }}
       gracePeriodMinutes={gracePeriodMinutes}
+      canDelete={canDeleteAttendance(profile.role)}
     />
   );
 }

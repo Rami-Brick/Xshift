@@ -6,17 +6,20 @@ import { UserPlus, ChevronRight } from 'lucide-react';
 import { SearchInput } from '@/design-kit/primitives/SearchInput';
 import { InitialAvatar } from '@/design-kit/primitives/InitialAvatar';
 import { Chip } from '@/design-kit/primitives/Chip';
+import { canCreateEmployees } from '@/lib/auth/roles';
 import { EmployeeFormDialog } from './EmployeeFormDialog';
-import type { Profile } from '@/types';
+import type { Profile, Role } from '@/types';
 
 interface EmployeeListProps {
   initialEmployees: Profile[];
+  viewerRole: Role;
 }
 
-export function EmployeeList({ initialEmployees }: EmployeeListProps) {
+export function EmployeeList({ initialEmployees, viewerRole }: EmployeeListProps) {
   const [employees, setEmployees] = useState<Profile[]>(initialEmployees);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const canCreate = canCreateEmployees(viewerRole);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -42,14 +45,16 @@ export function EmployeeList({ initialEmployees }: EmployeeListProps) {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 min-w-0"
         />
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-white font-semibold text-sm hover:opacity-90 transition shrink-0"
-        >
-          <UserPlus size={16} />
-          Nouvel employé
-        </button>
+        {canCreate && (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-white font-semibold text-sm hover:opacity-90 transition shrink-0"
+          >
+            <UserPlus size={16} />
+            Nouvel employé
+          </button>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -70,6 +75,7 @@ export function EmployeeList({ initialEmployees }: EmployeeListProps) {
               <div className="flex items-center gap-2 shrink-0">
                 {!emp.is_active && <Chip variant="dark">Inactif</Chip>}
                 {emp.role === 'admin' && <Chip variant="brand">Admin</Chip>}
+                {emp.role === 'manager' && <Chip variant="dark">Manager</Chip>}
                 <ChevronRight size={16} className="text-muted group-hover:text-ink transition" />
               </div>
             </Link>
@@ -79,6 +85,7 @@ export function EmployeeList({ initialEmployees }: EmployeeListProps) {
 
       {showForm && (
         <EmployeeFormDialog
+          viewerRole={viewerRole}
           onClose={() => setShowForm(false)}
           onSuccess={handleCreated}
         />

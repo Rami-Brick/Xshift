@@ -1,4 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { requireStaffCached } from '@/lib/auth/guards';
+import { canManageEmployeeAccounts } from '@/lib/auth/roles';
 import { timeAsync } from '@/lib/perf/timing';
 import { notFound } from 'next/navigation';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -31,6 +33,7 @@ interface PageProps {
 }
 
 export default async function AdminEmployeeDetailPage({ params }: PageProps) {
+  const { profile: viewer } = await requireStaffCached();
   const { id } = await params;
   const service = createServiceClient();
 
@@ -63,6 +66,10 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
   if (!profile) notFound();
 
   const p = profile as Profile;
+  if (p.role === 'admin' && !canManageEmployeeAccounts(viewer.role)) {
+    notFound();
+  }
+
   const records = (recent ?? []) as Attendance[];
   const presentCount = (monthRecords ?? []).filter((r) => r.status === 'present' || r.status === 'late').length;
   const lateCount = (monthRecords ?? []).filter((r) => r.status === 'late').length;
@@ -76,11 +83,12 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-ink tracking-tight">{p.full_name}</h1>
             {p.role === 'admin' && <Chip variant="brand">Admin</Chip>}
+            {p.role === 'manager' && <Chip variant="dark">Manager</Chip>}
             {!p.is_active && <Chip variant="dark">Inactif</Chip>}
           </div>
           <p className="text-sm text-muted mt-0.5">{p.email}</p>
         </div>
-        <EmployeeDetailActions employee={p} />
+        <EmployeeDetailActions employee={p} viewerRole={viewer.role} />
       </div>
 
       {/* Info grid */}

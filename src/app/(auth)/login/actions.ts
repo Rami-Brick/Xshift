@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { homePathForRole } from '@/lib/auth/roles';
 import { loginSchema } from '@/lib/validation/auth';
 
 export async function loginAction(formData: FormData) {
@@ -46,9 +47,5 @@ export async function loginAction(formData: FormData) {
     return { error: 'Votre compte a été désactivé. Contactez l\'administrateur.' };
   }
 
-  if (profile?.role === 'admin') {
-    redirect('/admin/dashboard');
-  }
-
-  redirect('/dashboard');
+  redirect(homePathForRole(profile?.role ?? 'employee'));
 }

@@ -36,9 +36,10 @@ function daysBetween(start: string, end: string): number {
 interface Props {
   initialRequests: LeaveRequestListItem[];
   employees: Pick<Profile, 'id' | 'full_name'>[];
+  canDelete: boolean;
 }
 
-export function AdminLeaveTable({ initialRequests, employees }: Props) {
+export function AdminLeaveTable({ initialRequests, employees, canDelete }: Props) {
   const [requests, setRequests] = useState<LeaveRequestListItem[]>(initialRequests);
   const [editTarget, setEditTarget] = useState<LeaveRequestListItem | 'new' | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -190,14 +191,16 @@ export function AdminLeaveTable({ initialRequests, employees }: Props) {
                         >
                           <Pencil size={14} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(req.id)}
-                          className="p-1.5 rounded-lg text-muted hover:text-trend-down hover:bg-trend-down/10 transition"
-                          aria-label="Supprimer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(req.id)}
+                            className="p-1.5 rounded-lg text-muted hover:text-trend-down hover:bg-trend-down/10 transition"
+                            aria-label="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

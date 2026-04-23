@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
+import { requireStaffCached } from '@/lib/auth/guards';
+import { canDeleteDayOff } from '@/lib/auth/roles';
 import { timeAsync } from '@/lib/perf/timing';
 import { AdminDayOffTable } from '@/components/day-off/AdminDayOffTable';
 import type { DayOffChangeListItem, Profile } from '@/types';
@@ -16,6 +18,7 @@ export default function AdminDayOffPage() {
 }
 
 async function AdminDayOffContent() {
+  const { profile } = await requireStaffCached();
   const service = createServiceClient();
 
   const [changesResult, employeesResult] = await timeAsync(
@@ -46,7 +49,7 @@ async function AdminDayOffContent() {
     'id' | 'full_name' | 'default_day_off'
   >[];
 
-  return <AdminDayOffTable initialChanges={rows} employees={employees} />;
+  return <AdminDayOffTable initialChanges={rows} employees={employees} canDelete={canDeleteDayOff(profile.role)} />;
 }
 
 function DayOffTableSkeleton() {
