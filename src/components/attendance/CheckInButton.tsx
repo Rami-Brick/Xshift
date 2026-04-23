@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { MapPin, LogIn, LogOut, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { getDeviceId, getDeviceLabel } from '@/lib/device';
 import type { Attendance } from '@/types';
 
 interface CheckInButtonProps {
@@ -58,12 +59,13 @@ export function CheckInButton({ today, onSuccess }: CheckInButtonProps) {
 
     setPhase('submitting');
     const endpoint = hasCheckedIn ? '/api/checkout' : '/api/checkin';
+    const deviceId = getDeviceId();
 
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude, longitude, accuracy }),
+        body: JSON.stringify({ latitude, longitude, accuracy, device_id: deviceId, device_label: getDeviceLabel(deviceId) }),
       });
 
       const data = (await res.json()) as CheckInErrorResponse;

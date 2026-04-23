@@ -78,6 +78,8 @@ export interface Attendance {
   check_in_distance_meters: number | null;
   check_out_distance_meters: number | null;
   note: string | null;
+  device_id: string | null;
+  device_label: string | null;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
@@ -96,6 +98,8 @@ export type AttendanceListItem = Pick<
   | 'late_minutes'
   | 'forgot_checkout'
   | 'note'
+  | 'device_id'
+  | 'device_label'
 > & {
   profiles?: Pick<Profile, 'id' | 'full_name' | 'email' | 'work_start_time'>;
 };

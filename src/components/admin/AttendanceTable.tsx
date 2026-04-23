@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
@@ -37,8 +37,24 @@ interface AttendanceTableProps {
   gracePeriodMinutes: number;
 }
 
+function buildSuspectDevices(records: AttendanceListItem[]): Set<string> {
+  const deviceToEmployees = new Map<string, Set<string>>();
+  for (const r of records) {
+    if (!r.device_id) continue;
+    let set = deviceToEmployees.get(r.device_id);
+    if (!set) { set = new Set(); deviceToEmployees.set(r.device_id, set); }
+    set.add(r.user_id);
+  }
+  const suspects = new Set<string>();
+  for (const [id, set] of deviceToEmployees) {
+    if (set.size > 1) suspects.add(id);
+  }
+  return suspects;
+}
+
 export function AttendanceTable({ initialRecords, employees, initialFilters, gracePeriodMinutes }: AttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceListItem[]>(initialRecords);
+  const suspectDevices = useMemo(() => buildSuspectDevices(records), [records]);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [loading, setLoading] = useState(false);
   const [editTarget, setEditTarget] = useState<AttendanceListItem | 'new' | null>(null);
@@ -169,11 +185,14 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
                   <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Départ</th>
                   <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Statut</th>
                   <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Retard</th>
+                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Appareil</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {records.map((row) => (
+                {records.map((row) => {
+                  const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
+                  return (
                   <tr key={row.id} className="border-b border-soft last:border-0 hover:bg-canvas/50 transition">
                     <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-4 py-3 text-ink whitespace-nowrap">
@@ -198,6 +217,18 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
                         return <span className="text-muted">—</span>;
                       })()}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {row.device_label ? (
+                        <span
+                          className={isSuspect ? 'text-amber-600 font-medium text-xs' : 'text-muted text-xs'}
+                          title={isSuspect ? 'Appareil partagé — fraude possible' : undefined}
+                        >
+                          {row.device_label}{isSuspect && ' ⚠'}
+                        </span>
+                      ) : (
+                        <span className="text-muted text-xs">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
                         <button
@@ -219,7 +250,8 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

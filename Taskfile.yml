@@ -26,3 +26,8 @@ tasks:
     desc: Run linter
     cmds:
       - npm run lint
+
+  seed:
+    desc: Seed test users and demo data
+    cmds:
+      - npm run seed:test

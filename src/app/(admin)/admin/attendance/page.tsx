@@ -50,7 +50,7 @@ async function AdminAttendanceContent({
       let q = service
         .from('attendance')
         .select(
-          'id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout, note, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)',
+          'id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout, note, device_id, device_label, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)',
         )
         .order('date', { ascending: false })
         .gte('date', start)

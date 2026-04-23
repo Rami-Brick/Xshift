@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
-  const { latitude, longitude, accuracy } = body ?? {};
+  const { latitude, longitude, accuracy, device_id, device_label } = body ?? {};
 
   if (
     typeof latitude !== 'number' ||
@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
       check_out_accuracy_meters: accuracy,
       check_out_distance_meters: distanceM,
       forgot_checkout: false,
+      ...(typeof device_id === 'string' && device_id ? { device_id, device_label: device_label ?? null } : {}),
     })
     .eq('id', existing.id);
 
