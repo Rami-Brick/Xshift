@@ -1,11 +1,11 @@
-import { requireAdminCached } from '@/lib/auth/guards';
+import { requireStaffCached } from '@/lib/auth/guards';
 import { AdminSidebar } from '@/components/shell/AdminSidebar';
 import { AdminMobileHeader } from '@/components/shell/AdminDrawer';
 import { AdminTopBar } from '@/components/shell/AdminTopBar';
 import type { ReactNode } from 'react';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const { profile } = await requireAdminCached();
+  const { profile } = await requireStaffCached();
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </div>
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
-          <AdminTopBar fullName={profile.full_name} />
+          <AdminTopBar fullName={profile.full_name} role={profile.role} />
           <div className="px-6 pb-6">
             {children}
           </div>
@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
       {/* Mobile: top bar + drawer + content */}
       <div className="md:hidden flex flex-col min-h-screen">
-        <AdminMobileHeader />
+        <AdminMobileHeader role={profile.role} />
         <main className="flex-1 overflow-y-auto p-4">
           {children}
         </main>

@@ -25,9 +25,10 @@ function statusVariant(status: string): 'lime' | 'trendDown' | 'neutral' | 'bran
 interface Props {
   initialChanges: DayOffChangeListItem[];
   employees: Pick<Profile, 'id' | 'full_name' | 'default_day_off'>[];
+  canDelete: boolean;
 }
 
-export function AdminDayOffTable({ initialChanges, employees }: Props) {
+export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props) {
   const [changes, setChanges] = useState<DayOffChangeListItem[]>(initialChanges);
   const [editTarget, setEditTarget] = useState<DayOffChangeListItem | 'new' | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -185,14 +186,16 @@ export function AdminDayOffTable({ initialChanges, employees }: Props) {
                         >
                           <Pencil size={14} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(c.id)}
-                          className="p-1.5 rounded-lg text-muted hover:text-trend-down hover:bg-trend-down/10 transition"
-                          aria-label="Supprimer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(c.id)}
+                            className="p-1.5 rounded-lg text-muted hover:text-trend-down hover:bg-trend-down/10 transition"
+                            aria-label="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

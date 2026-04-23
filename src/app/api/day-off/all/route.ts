@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { requireAdmin } from '@/lib/auth/guards';
+import { requireStaff } from '@/lib/auth/guards';
 import { createServiceClient } from '@/lib/supabase/service';
 import { adminDayOffSchema } from '@/lib/validation/day-off';
 import { logActivity } from '@/lib/activity/log';
@@ -15,7 +15,7 @@ const CHANGE_SELECT =
   'id, user_id, iso_year, iso_week, old_day, new_day, status, reason, admin_note, created_at, updated_at, profiles!day_off_changes_user_id_fkey(id, full_name, email)';
 
 export async function GET(request: NextRequest) {
-  await requireAdmin();
+  await requireStaff();
   const service = createServiceClient();
   const { searchParams } = new URL(request.url);
   const statusParam = searchParams.get('status');
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId: actorId } = await requireAdmin();
+  const { userId: actorId } = await requireStaff();
 
   const body = await request.json().catch(() => null);
   const parsed = adminDayOffSchema.safeParse(body);

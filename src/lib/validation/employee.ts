@@ -16,7 +16,7 @@ export const createEmployeeSchema = z.object({
     .transform((v) => v.slice(0, 5))
     .optional(),
   leave_balance: z.coerce.number().min(0).max(365).optional(),
-  role: z.enum(['employee', 'admin']).optional(),
+  role: z.enum(['employee', 'manager', 'admin']).optional(),
   default_day_off: dayOfWeekSchema.optional(),
 });
 
@@ -33,7 +33,7 @@ export const updateEmployeeSchema = z.object({
     .transform((v) => v.slice(0, 5))
     .optional(),
   leave_balance: z.coerce.number().min(0).max(365).optional(),
-  role: z.enum(['employee', 'admin']).optional(),
+  role: z.enum(['employee', 'manager', 'admin']).optional(),
   is_active: z.boolean().optional(),
   default_day_off: dayOfWeekSchema.optional(),
 });

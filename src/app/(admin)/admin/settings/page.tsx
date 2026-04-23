@@ -1,9 +1,11 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { requireAdminCached } from '@/lib/auth/guards';
 import { timeAsync } from '@/lib/perf/timing';
 import { SettingsForm } from '@/components/admin/SettingsForm';
 import type { OfficeSettings } from '@/types';
 
 export default async function AdminSettingsPage() {
+  await requireAdminCached();
   const service = createServiceClient();
 
   const { data } = await timeAsync('page.admin.settings.data', () =>

@@ -13,7 +13,8 @@ A polished, installable attendance PWA — French-only at launch, mobile-first f
 ### Users
 
 - **Employee** — checks in/out, sees today's status, history, leave balance, assigned leave.
-- **Admin** — manages employees, sees attendance across the team, adjusts records (full create/edit/delete), assigns leave, configures office geofence and app-wide settings, exports reports, audits activity.
+- **Manager** — supervises daily operations: attendance, leave/day-off review, limited employee work data, and attendance reports.
+- **Admin** — full control over employees, settings, reports, and audit/security surfaces.
 
 ## Decisions (locked)
 

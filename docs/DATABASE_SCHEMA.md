@@ -297,7 +297,7 @@ There is no generated `src/types/database.ts` committed yet. Hand-written domain
 types live at `src/types/index.ts`:
 
 ```ts
-export type Role = 'employee' | 'admin';
+export type Role = 'employee' | 'manager' | 'admin';
 export type AttendanceStatus = 'present' | 'late' | 'absent' | 'leave' | 'holiday';
 export type LeaveType = 'annual' | 'sick' | 'unpaid' | 'other';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';

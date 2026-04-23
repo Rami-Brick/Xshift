@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
+import { requireStaffCached } from '@/lib/auth/guards';
+import { canManageEmployeeAccounts } from '@/lib/auth/roles';
 import { timeAsync } from '@/lib/perf/timing';
 import { EmployeeList } from '@/components/admin/EmployeeList';
 import type { Profile } from '@/types';
@@ -18,20 +20,27 @@ export default function AdminEmployeesPage() {
 }
 
 async function AdminEmployeesContent() {
+  const { profile } = await requireStaffCached();
   const service = createServiceClient();
 
-  const { data } = await timeAsync('page.admin.employees.data', () =>
-    service
+  const { data } = await timeAsync('page.admin.employees.data', () => {
+    let query = service
       .from('profiles')
       .select(
         'id, full_name, email, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
       )
-      .order('full_name', { ascending: true }),
-  );
+      .order('full_name', { ascending: true });
+
+    if (!canManageEmployeeAccounts(profile.role)) {
+      query = query.neq('role', 'admin');
+    }
+
+    return query;
+  });
 
   const employees = (data ?? []) as Profile[];
 
-  return <EmployeeList initialEmployees={employees} />;
+  return <EmployeeList initialEmployees={employees} viewerRole={profile.role} />;
 }
 
 function EmployeeListSkeleton() {

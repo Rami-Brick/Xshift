@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireAdmin } from '@/lib/auth/guards';
+import { requireStaff } from '@/lib/auth/guards';
 import { manualAttendanceSchema } from '@/lib/validation/attendance';
 import { logActivity } from '@/lib/activity/log';
 
 export async function GET(request: NextRequest) {
-  await requireAdmin();
+  await requireStaff();
   const service = createServiceClient();
   const { searchParams } = new URL(request.url);
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId: actorId } = await requireAdmin();
+  const { userId: actorId } = await requireStaff();
   const service = createServiceClient();
 
   const body = await request.json().catch(() => null);

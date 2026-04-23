@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { eachDayOfInterval, parseISO } from 'date-fns';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { isStaffRole } from '@/lib/auth/roles';
 import { adminLeaveUpdateSchema, employeeLeaveUpdateSchema } from '@/lib/validation/leave';
 import { logActivity } from '@/lib/activity/log';
 import type { LeaveStatus, Profile } from '@/types';
@@ -44,7 +45,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Demande introuvable' }, { status: 404 });
   }
 
-  if (actor.profile.role === 'admin') {
+  if (isStaffRole(actor.profile.role)) {
     return updateLeaveAsAdmin(request, service, actor.userId, leave as LeaveMutationRow);
   }
 

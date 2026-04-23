@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { isStaffRole } from '@/lib/auth/roles';
 import {
   employeeDayOffUpdateSchema,
   adminDayOffUpdateSchema,
@@ -43,7 +44,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   if (!change) return NextResponse.json({ error: 'Demande introuvable' }, { status: 404 });
 
-  if (actor.profile.role === 'admin') {
+  if (isStaffRole(actor.profile.role)) {
     return updateAsAdmin(request, service, actor.userId, change as ChangeRow);
   }
 

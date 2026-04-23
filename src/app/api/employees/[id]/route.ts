@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireAdmin } from '@/lib/auth/guards';
-import { updateEmployeeSchema } from '@/lib/validation/employee';
+import { requireAdmin, requireStaff } from '@/lib/auth/guards';
+import { canManageEmployeeAccounts } from '@/lib/auth/roles';
+import { updateEmployeeSchema, type UpdateEmployeeInput } from '@/lib/validation/employee';
 import { logActivity } from '@/lib/activity/log';
+import type { Role } from '@/types';
 
 const PROFILE_SELECT =
   'id, full_name, email, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at';
@@ -12,7 +14,7 @@ interface RouteParams {
 }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
-  await requireAdmin();
+  const { profile: actorProfile } = await requireStaff();
   const { id } = await params;
   const service = createServiceClient();
 
@@ -21,12 +23,15 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   if (error || !data) {
     return NextResponse.json({ error: 'Employé introuvable' }, { status: 404 });
   }
+  if (data.role === 'admin' && !canManageEmployeeAccounts(actorProfile.role)) {
+    return NextResponse.json({ error: 'Employé introuvable' }, { status: 404 });
+  }
 
   return NextResponse.json(data);
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const { userId: actorId } = await requireAdmin();
+  const { userId: actorId, profile: actorProfile } = await requireStaff();
   const { id } = await params;
   const service = createServiceClient();
 
@@ -40,7 +45,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const updates = parsed.data;
+  const updates = sanitizeEmployeeUpdates(actorProfile.role, parsed.data);
+
+  if (!updates) {
+    return NextResponse.json(
+      { error: 'Les managers peuvent uniquement modifier les horaires et le solde de congés' },
+      { status: 403 },
+    );
+  }
 
   // Prevent admin from deactivating themselves
   if (id === actorId && updates.is_active === false) {
@@ -62,6 +74,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   if (!before) {
     return NextResponse.json({ error: 'Employé introuvable' }, { status: 404 });
+  }
+  if (before.role === 'admin' && !canManageEmployeeAccounts(actorProfile.role)) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
   }
 
   const { data, error } = await service
@@ -126,4 +141,22 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   });
 
   return NextResponse.json({ success: true });
+}
+
+function sanitizeEmployeeUpdates(actorRole: Role, updates: UpdateEmployeeInput): UpdateEmployeeInput | null {
+  if (actorRole === 'admin') return updates;
+
+  const forbiddenKeys = Object.keys(updates).filter(
+    (key) => !['work_start_time', 'work_end_time', 'leave_balance'].includes(key),
+  );
+
+  if (forbiddenKeys.length > 0) {
+    return null;
+  }
+
+  return {
+    ...(updates.work_start_time !== undefined ? { work_start_time: updates.work_start_time } : {}),
+    ...(updates.work_end_time !== undefined ? { work_end_time: updates.work_end_time } : {}),
+    ...(updates.leave_balance !== undefined ? { leave_balance: updates.leave_balance } : {}),
+  };
 }
