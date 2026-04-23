@@ -85,12 +85,12 @@ A row whose `check_in_at is not null`, `check_out_at is null`, and local time ha
 ## Admin employees (`/admin/employees`)
 
 - Search by name/email.
-- Table columns: avatar, nom, email, rôle, département, poste, heures de travail, solde de congés, statut.
+- Table columns: avatar, nom, email, rôle, heures de travail, solde de congés, statut.
 - Actions: Créer, Modifier, Désactiver, Ouvrir détail.
 
 ### Create employee
 
-1. Admin submits the form (nom, email, mot de passe temporaire, rôle, département, poste, heures de travail, solde de congés).
+1. Admin submits the form (nom, email, mot de passe temporaire, rôle, heures de travail, solde de congés).
 2. Route handler `POST /api/employees` verifies admin role.
 3. Service-role client creates the Supabase auth user (`auth.admin.createUser`, `email_confirm: true`).
 4. The database trigger creates a minimal `profiles` row, so the handler should update/upsert that row with the final employee details.
@@ -149,4 +149,4 @@ No hard deletes in MVP.
 ## Reports (`/admin/reports`)
 
 - MVP: CSV export of filtered attendance via `GET /api/reports/attendance.csv`.
-- Stretch: PDF, department report, payroll-ready summary.
+- Stretch: PDF and payroll-ready summary.

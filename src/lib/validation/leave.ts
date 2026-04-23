@@ -24,6 +24,11 @@ export const reviewLeaveSchema = z.object({
   deduct_balance: z.boolean().optional(),
 });
 
+export const adminLeaveUpdateSchema = adminLeaveSchema.partial();
+export const employeeLeaveUpdateSchema = leaveRequestSchema;
+
 export type LeaveRequestInput = z.infer<typeof leaveRequestSchema>;
 export type AdminLeaveInput = z.infer<typeof adminLeaveSchema>;
 export type ReviewLeaveInput = z.infer<typeof reviewLeaveSchema>;
+export type AdminLeaveUpdateInput = z.infer<typeof adminLeaveUpdateSchema>;
+export type EmployeeLeaveUpdateInput = z.infer<typeof employeeLeaveUpdateSchema>;

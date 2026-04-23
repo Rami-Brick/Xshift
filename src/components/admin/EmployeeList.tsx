@@ -24,9 +24,7 @@ export function EmployeeList({ initialEmployees }: EmployeeListProps) {
     return employees.filter(
       (e) =>
         e.full_name.toLowerCase().includes(q) ||
-        e.email.toLowerCase().includes(q) ||
-        (e.department ?? '').toLowerCase().includes(q) ||
-        (e.position ?? '').toLowerCase().includes(q),
+        e.email.toLowerCase().includes(q),
     );
   }, [employees, search]);
 
@@ -68,9 +66,6 @@ export function EmployeeList({ initialEmployees }: EmployeeListProps) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-ink truncate">{emp.full_name}</p>
                 <p className="text-caption text-muted truncate">{emp.email}</p>
-                {emp.position && (
-                  <p className="text-caption text-muted truncate">{emp.position}</p>
-                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {!emp.is_active && <Chip variant="dark">Inactif</Chip>}

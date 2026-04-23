@@ -1,5 +1,5 @@
-import { formatInTimeZone } from 'date-fns-tz';
-import { parse, differenceInMinutes } from 'date-fns';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+import { differenceInMinutes } from 'date-fns';
 import type { AttendanceStatus } from '@/types';
 
 const OFFICE_TZ = 'Africa/Tunis';
@@ -14,15 +14,20 @@ export function calcLateMinutes(
   now: Date,
 ): number {
   const todayStr = formatInTimeZone(now, OFFICE_TZ, 'yyyy-MM-dd');
-  const startOfDay = parse(`${todayStr} ${workStartTime}`, 'yyyy-MM-dd HH:mm', new Date());
-
-  const diffMin = differenceInMinutes(now, startOfDay);
-  if (diffMin <= gracePeriodMinutes) return 0;
-  return diffMin;
+  const startOfDay = fromZonedTime(`${todayStr} ${normalizeTime(workStartTime)}`, OFFICE_TZ);
+  return differenceInMinutes(now, startOfDay);
 }
 
-export function resolveStatus(lateMinutes: number): AttendanceStatus {
-  return lateMinutes > 0 ? 'late' : 'present';
+export function isLate(lateMinutes: number, gracePeriodMinutes: number): boolean {
+  return lateMinutes > gracePeriodMinutes;
+}
+
+function normalizeTime(value: string): string {
+  return value.slice(0, 5);
+}
+
+export function resolveStatus(lateMinutes: number, gracePeriodMinutes = 0): AttendanceStatus {
+  return lateMinutes > gracePeriodMinutes ? 'late' : 'present';
 }
 
 export function formatTime(ts: string | null): string {

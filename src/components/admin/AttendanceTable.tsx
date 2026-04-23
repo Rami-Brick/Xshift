@@ -1,17 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
 import { AttendanceEditDialog } from './AttendanceEditDialog';
 import { formatTime, formatDate } from '@/lib/attendance/status';
-import type { Attendance, Profile } from '@/types';
-
-type AttendanceWithProfile = Attendance & {
-  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
-};
+import type { AttendanceListItem, Profile } from '@/types';
 
 const STATUS_LABEL: Record<string, string> = {
   present: 'Présent',
@@ -19,6 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
   absent: 'Absent',
   leave: 'En congé',
   holiday: 'Jour férié',
+  day_off: 'Jour de repos',
 };
 
 function statusVariant(status: string): 'lime' | 'trendDown' | 'neutral' {
@@ -35,18 +31,35 @@ interface Filters {
 }
 
 interface AttendanceTableProps {
-  initialRecords: AttendanceWithProfile[];
-  employees: Pick<Profile, 'id' | 'full_name'>[];
+  initialRecords: AttendanceListItem[];
+  employees: Pick<Profile, 'id' | 'full_name' | 'work_start_time'>[];
   initialFilters: Filters;
+  gracePeriodMinutes: number;
 }
 
-export function AttendanceTable({ initialRecords, employees, initialFilters }: AttendanceTableProps) {
-  const [records, setRecords] = useState<AttendanceWithProfile[]>(initialRecords);
+function buildSuspectDevices(records: AttendanceListItem[]): Set<string> {
+  const deviceToEmployees = new Map<string, Set<string>>();
+  for (const r of records) {
+    if (!r.device_id) continue;
+    let set = deviceToEmployees.get(r.device_id);
+    if (!set) { set = new Set(); deviceToEmployees.set(r.device_id, set); }
+    set.add(r.user_id);
+  }
+  const suspects = new Set<string>();
+  for (const [id, set] of deviceToEmployees) {
+    if (set.size > 1) suspects.add(id);
+  }
+  return suspects;
+}
+
+export function AttendanceTable({ initialRecords, employees, initialFilters, gracePeriodMinutes }: AttendanceTableProps) {
+  const [records, setRecords] = useState<AttendanceListItem[]>(initialRecords);
+  const suspectDevices = useMemo(() => buildSuspectDevices(records), [records]);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [loading, setLoading] = useState(false);
-  const [editTarget, setEditTarget] = useState<AttendanceWithProfile | 'new' | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const router = useRouter();
+  const [editTarget, setEditTarget] = useState<AttendanceListItem | 'new' | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AttendanceListItem | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function applyFilters(next: Filters) {
     setFilters(next);
@@ -65,24 +78,22 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
     setLoading(false);
   }
 
-  async function handleDelete(id: string) {
-    if (deletingId !== id) {
-      setDeletingId(id);
-      return;
-    }
-    const res = await fetch(`/api/attendance/${id}`, { method: 'DELETE' });
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    const res = await fetch(`/api/attendance/${deleteTarget.id}`, { method: 'DELETE' });
     const json = await res.json();
+    setDeleteLoading(false);
     if (!res.ok) {
       toast.error(json.error ?? 'Erreur lors de la suppression');
-      setDeletingId(null);
       return;
     }
     toast.success('Entrée supprimée');
-    setRecords((prev) => prev.filter((r) => r.id !== id));
-    setDeletingId(null);
+    setRecords((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+    setDeleteTarget(null);
   }
 
-  function handleSaved(saved: AttendanceWithProfile) {
+  function handleSaved(saved: AttendanceListItem) {
     setRecords((prev) => {
       const idx = prev.findIndex((r) => r.id === saved.id);
       if (idx >= 0) {
@@ -93,7 +104,6 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
       return [saved, ...prev].sort((a, b) => b.date.localeCompare(a.date));
     });
     setEditTarget(null);
-    router.refresh();
   }
 
   return (
@@ -175,11 +185,14 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
                   <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Départ</th>
                   <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Statut</th>
                   <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Retard</th>
+                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Appareil</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {records.map((row) => (
+                {records.map((row) => {
+                  const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
+                  return (
                   <tr key={row.id} className="border-b border-soft last:border-0 hover:bg-canvas/50 transition">
                     <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-4 py-3 text-ink whitespace-nowrap">
@@ -196,7 +209,25 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
                       </Chip>
                     </td>
                     <td className="px-4 py-3 text-muted">
-                      {(row.late_minutes ?? 0) > 0 ? `+${row.late_minutes} min` : '—'}
+                      {(() => {
+                        const m = row.late_minutes ?? 0;
+                        if (m < 0) return <span className="text-trend-up">{m} min</span>;
+                        if (m > gracePeriodMinutes) return <span className="text-trend-down">+{m} min</span>;
+                        if (m > 0) return <span className="text-muted">+{m} min</span>;
+                        return <span className="text-muted">—</span>;
+                      })()}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {row.device_label ? (
+                        <span
+                          className={isSuspect ? 'text-amber-600 font-medium text-xs' : 'text-muted text-xs'}
+                          title={isSuspect ? 'Appareil partagé — fraude possible' : undefined}
+                        >
+                          {row.device_label}{isSuspect && ' ⚠'}
+                        </span>
+                      ) : (
+                        <span className="text-muted text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
@@ -210,12 +241,8 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(row.id)}
-                          className={`p-1.5 rounded-lg transition ${
-                            deletingId === row.id
-                              ? 'bg-trend-down text-white'
-                              : 'text-trend-down hover:bg-trend-down/10'
-                          }`}
+                          onClick={() => setDeleteTarget(row)}
+                          className="p-1.5 rounded-lg text-trend-down hover:bg-trend-down/10 transition"
                           aria-label="Supprimer"
                         >
                           <Trash2 size={14} />
@@ -223,7 +250,8 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -234,9 +262,48 @@ export function AttendanceTable({ initialRecords, employees, initialFilters }: A
         <AttendanceEditDialog
           record={editTarget === 'new' ? null : editTarget}
           employees={employees}
+          gracePeriodMinutes={gracePeriodMinutes}
           onClose={() => setEditTarget(null)}
           onSuccess={handleSaved}
         />
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
+          <div className="relative bg-canvas rounded-2xl shadow-soft w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-trend-down/10 flex items-center justify-center">
+                <AlertTriangle size={18} className="text-trend-down" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-ink">Supprimer cette présence ?</h2>
+                <p className="text-caption text-muted mt-0.5">
+                  {deleteTarget.profiles?.full_name ?? '—'} · {formatDate(deleteTarget.date)}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-muted">Cette action est irréversible.</p>
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteLoading}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-muted hover:text-ink hover:bg-soft transition"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleteLoading}
+                className="px-5 py-2 rounded-xl bg-trend-down text-white font-semibold text-sm hover:opacity-90 transition disabled:opacity-60"
+              >
+                {deleteLoading ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

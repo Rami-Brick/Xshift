@@ -1,10 +1,10 @@
-import { requireAdmin } from '@/lib/auth/guards';
+import { requireAdminCached } from '@/lib/auth/guards';
 import { AdminSidebar } from '@/components/shell/AdminSidebar';
 import { AdminMobileHeader } from '@/components/shell/AdminDrawer';
 import type { ReactNode } from 'react';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  await requireAdmin();
+  await requireAdminCached();
 
   return (
     <div className="min-h-screen bg-canvas">

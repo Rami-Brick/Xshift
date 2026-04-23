@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { Card } from '@/design-kit/primitives/Card';
 import { Chip } from '@/design-kit/primitives/Chip';
@@ -15,6 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
   absent: 'Absent',
   leave: 'En congé',
   holiday: 'Jour férié',
+  day_off: 'Jour de repos',
 };
 
 const STATUS_TONE: Record<string, 'lime' | 'trendDown' | 'neutral'> = {
@@ -23,15 +23,17 @@ const STATUS_TONE: Record<string, 'lime' | 'trendDown' | 'neutral'> = {
   absent: 'trendDown',
   leave: 'neutral',
   holiday: 'neutral',
+  day_off: 'neutral',
 };
 
 interface TodayCardProps {
   initialToday: Attendance | null;
+  gracePeriodMinutes: number;
+  isDayOff?: boolean;
 }
 
-export function TodayCard({ initialToday }: TodayCardProps) {
+export function TodayCard({ initialToday, gracePeriodMinutes, isDayOff = false }: TodayCardProps) {
   const [today, setToday] = useState<Attendance | null>(initialToday);
-  const router = useRouter();
 
   async function refresh() {
     const res = await fetch(
@@ -41,7 +43,6 @@ export function TodayCard({ initialToday }: TodayCardProps) {
       const data = await res.json();
       setToday(data[0] ?? null);
     }
-    router.refresh();
   }
 
   return (
@@ -73,9 +74,19 @@ export function TodayCard({ initialToday }: TodayCardProps) {
               {today?.check_in_at ? formatTime(today.check_in_at) : '—'}
             </span>
           </div>
-          {(today?.late_minutes ?? 0) > 0 && (
+          {(today?.late_minutes ?? 0) > gracePeriodMinutes && (
             <p className="text-caption text-trend-down mt-1">
               +{today!.late_minutes} min de retard
+            </p>
+          )}
+          {(today?.late_minutes ?? 0) > 0 && (today?.late_minutes ?? 0) <= gracePeriodMinutes && (
+            <p className="text-caption text-muted mt-1">
+              +{today!.late_minutes} min (dans la tolérance)
+            </p>
+          )}
+          {(today?.late_minutes ?? 0) < 0 && (
+            <p className="text-caption text-trend-up mt-1">
+              {today!.late_minutes} min d&apos;avance
             </p>
           )}
         </div>
@@ -90,7 +101,16 @@ export function TodayCard({ initialToday }: TodayCardProps) {
         </div>
       </div>
 
-      <CheckInButton today={today} onSuccess={refresh} />
+      {isDayOff ? (
+        <div className="bg-canvas rounded-xl p-4 text-center">
+          <p className="text-cardTitle font-bold text-ink">Jour de repos</p>
+          <p className="text-caption text-muted mt-1">
+            Pas de pointage nécessaire aujourd&apos;hui.
+          </p>
+        </div>
+      ) : (
+        <CheckInButton today={today} onSuccess={refresh} />
+      )}
     </Card>
   );
 }

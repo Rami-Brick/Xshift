@@ -6,16 +6,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { leaveRequestSchema, type LeaveRequestInput } from '@/lib/validation/leave';
-import type { LeaveRequest } from '@/types';
+import type { LeaveRequestListItem } from '@/types';
 import { formatInTimeZone } from 'date-fns-tz';
 
 interface Props {
+  request?: LeaveRequestListItem | null;
   onClose: () => void;
-  onSuccess: (req: LeaveRequest) => void;
+  onSuccess: (req: LeaveRequestListItem) => void;
 }
 
-export function LeaveRequestDialog({ onClose, onSuccess }: Props) {
+export function LeaveRequestDialog({ request, onClose, onSuccess }: Props) {
   const today = formatInTimeZone(new Date(), 'Africa/Tunis', 'yyyy-MM-dd');
+  const isEdit = !!request;
 
   const {
     register,
@@ -23,11 +25,18 @@ export function LeaveRequestDialog({ onClose, onSuccess }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<LeaveRequestInput>({
     resolver: zodResolver(leaveRequestSchema),
-    defaultValues: {
-      start_date: today,
-      end_date: today,
-      type: 'annual',
-    },
+    defaultValues: isEdit
+      ? {
+          start_date: request.start_date,
+          end_date: request.end_date,
+          type: request.type,
+          reason: request.reason ?? '',
+        }
+      : {
+          start_date: today,
+          end_date: today,
+          type: 'annual',
+        },
   });
 
   useEffect(() => {
@@ -39,8 +48,8 @@ export function LeaveRequestDialog({ onClose, onSuccess }: Props) {
   }, [onClose]);
 
   async function onSubmit(data: LeaveRequestInput) {
-    const res = await fetch('/api/leave', {
-      method: 'POST',
+    const res = await fetch(isEdit ? `/api/leave/${request.id}` : '/api/leave', {
+      method: isEdit ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
@@ -49,8 +58,8 @@ export function LeaveRequestDialog({ onClose, onSuccess }: Props) {
       toast.error(json.error ?? 'Une erreur est survenue');
       return;
     }
-    toast.success('Demande envoyée');
-    onSuccess(json as LeaveRequest);
+    toast.success(isEdit ? 'Demande mise à jour' : 'Demande envoyée');
+    onSuccess(json as LeaveRequestListItem);
   }
 
   return (
@@ -58,7 +67,9 @@ export function LeaveRequestDialog({ onClose, onSuccess }: Props) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-canvas rounded-2xl shadow-soft w-full max-w-sm">
         <div className="flex items-center justify-between p-5 border-b border-soft">
-          <h2 className="text-base font-semibold text-ink">Demande de congé</h2>
+          <h2 className="text-base font-semibold text-ink">
+            {isEdit ? 'Modifier la demande' : 'Demande de congé'}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -101,7 +112,7 @@ export function LeaveRequestDialog({ onClose, onSuccess }: Props) {
               disabled={isSubmitting}
               className="px-5 py-2 rounded-xl bg-brand text-white font-semibold text-sm hover:opacity-90 transition disabled:opacity-60"
             >
-              {isSubmitting ? 'Envoi…' : 'Envoyer'}
+              {isSubmitting ? 'Enregistrement...' : isEdit ? 'Enregistrer' : 'Envoyer'}
             </button>
           </div>
         </form>

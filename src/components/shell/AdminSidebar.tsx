@@ -1,23 +1,32 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Users, Clock, CalendarDays,
+  LayoutDashboard, Users, Clock, CalendarDays, CalendarOff,
   BarChart2, Settings, ScrollText, LogOut,
 } from 'lucide-react';
 import { SideNavRail, type SideNavItemSpec } from '@/design-kit/compounds/SideNavRail';
 import { logout } from '@/lib/auth/actions';
 
-type NavKey = 'dashboard' | 'employees' | 'attendance' | 'leave' | 'reports' | 'settings' | 'logs';
+type NavKey =
+  | 'dashboard'
+  | 'employees'
+  | 'attendance'
+  | 'leave'
+  | 'day-off'
+  | 'reports'
+  | 'settings'
+  | 'logs';
 
 const NAV_ITEMS: SideNavItemSpec<NavKey>[] = [
-  { key: 'dashboard',  icon: LayoutDashboard, label: 'Tableau de bord' },
-  { key: 'employees',  icon: Users,           label: 'Employés' },
-  { key: 'attendance', icon: Clock,           label: 'Présences' },
-  { key: 'leave',      icon: CalendarDays,    label: 'Congés' },
-  { key: 'reports',    icon: BarChart2,        label: 'Rapports' },
-  { key: 'settings',   icon: Settings,         label: 'Paramètres' },
-  { key: 'logs',       icon: ScrollText,       label: 'Journal' },
+  { key: 'dashboard',  icon: LayoutDashboard, label: 'Tableau de bord', href: '/admin/dashboard' },
+  { key: 'employees',  icon: Users,           label: 'Employés', href: '/admin/employees' },
+  { key: 'attendance', icon: Clock,           label: 'Présences', href: '/admin/attendance' },
+  { key: 'leave',      icon: CalendarDays,    label: 'Congés', href: '/admin/leave' },
+  { key: 'day-off',    icon: CalendarOff,     label: 'Jours de repos', href: '/admin/day-off' },
+  { key: 'reports',    icon: BarChart2,        label: 'Rapports', href: '/admin/reports' },
+  { key: 'settings',   icon: Settings,         label: 'Paramètres', href: '/admin/settings' },
+  { key: 'logs',       icon: ScrollText,       label: 'Journal', href: '/admin/logs' },
 ];
 
 const KEY_TO_PATH: Record<NavKey, string> = {
@@ -25,6 +34,7 @@ const KEY_TO_PATH: Record<NavKey, string> = {
   employees:  '/admin/employees',
   attendance: '/admin/attendance',
   leave:      '/admin/leave',
+  'day-off':  '/admin/day-off',
   reports:    '/admin/reports',
   settings:   '/admin/settings',
   logs:       '/admin/logs',
@@ -39,7 +49,6 @@ function pathToKey(pathname: string): NavKey {
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const activeKey = pathToKey(pathname);
 
   return (
@@ -47,7 +56,6 @@ export function AdminSidebar() {
       <SideNavRail
         items={NAV_ITEMS}
         activeKey={activeKey}
-        onChange={(key) => router.push(KEY_TO_PATH[key])}
         brand={
           <span className="font-bold text-lg" style={{ fontFamily: 'DM Sans, sans-serif' }}>X</span>
         }

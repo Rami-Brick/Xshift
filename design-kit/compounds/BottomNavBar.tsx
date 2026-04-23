@@ -6,6 +6,7 @@ export interface BottomNavItemSpec<K extends string = string> {
   key: K;
   icon: LucideIcon;
   label: string;
+  href?: string;
 }
 
 export interface BottomNavBarProps<K extends string = string> {
@@ -37,6 +38,7 @@ export function BottomNavBar<K extends string = string>({
           key={item.key}
           icon={item.icon}
           label={item.label}
+          href={item.href}
           active={item.key === activeKey}
           onClick={() => onChange?.(item.key)}
         />

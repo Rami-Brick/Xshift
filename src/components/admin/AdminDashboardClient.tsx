@@ -1,24 +1,12 @@
 'use client';
 
 import useSWR from 'swr';
-import { Users, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { Users, Clock, Calendar, AlertCircle, CalendarOff } from 'lucide-react';
 import { KpiCard } from '@/design-kit/compounds/KpiCard';
 import { formatInTimeZone } from 'date-fns-tz';
+import type { AdminStats } from '@/types';
 
 const OFFICE_TZ = 'Africa/Tunis';
-
-interface StatsResponse {
-  total_active: number;
-  today: { present: number; late: number; absent: number; leave: number };
-  month: { present: number; late: number; absent: number };
-  pending_leave: number;
-  recent_activity: Array<{
-    id: string;
-    action: string;
-    created_at: string;
-    actor: { full_name: string } | null;
-  }>;
-}
 
 const ACTION_LABEL: Record<string, string> = {
   checkin: 'Arrivée pointée',
@@ -34,29 +22,28 @@ const ACTION_LABEL: Record<string, string> = {
   reject_leave: 'Congé refusé',
   cancel_leave: 'Congé annulé',
   assign_leave: 'Congé assigné',
+  update_leave: 'Congé modifié',
+  delete_leave: 'Congé supprimé',
   update_settings: 'Paramètres mis à jour',
   login: 'Connexion',
+  request_day_off_change: 'Changement de repos demandé',
+  approve_day_off_change: 'Changement de repos approuvé',
+  reject_day_off_change: 'Changement de repos refusé',
+  cancel_day_off_change: 'Changement de repos annulé',
+  assign_day_off_change: 'Changement de repos assigné',
+  update_day_off_change: 'Changement de repos modifié',
+  delete_day_off_change: 'Changement de repos supprimé',
+  update_default_day_off: 'Jour de repos par défaut modifié',
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function AdminDashboardClient() {
-  const { data: stats, isLoading } = useSWR<StatsResponse>('/api/admin/stats', fetcher, {
+export function AdminDashboardClient({ initialStats }: { initialStats: AdminStats }) {
+  const { data: stats } = useSWR<AdminStats>('/api/admin/stats', fetcher, {
+    fallbackData: initialStats,
     refreshInterval: 60_000,
   });
-
-  if (isLoading || !stats) {
-    return (
-      <div className="space-y-5">
-        <h1 className="text-2xl font-bold text-ink tracking-tight">Tableau de bord</h1>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-surface rounded-xl p-5 shadow-softer animate-pulse h-24" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const currentStats = stats ?? initialStats;
 
   const today = formatInTimeZone(new Date(), OFFICE_TZ, 'EEEE d MMMM yyyy');
 
@@ -73,26 +60,34 @@ export function AdminDashboardClient() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard
             title="Présents"
-            value={stats.today.present}
+            value={currentStats.today.present}
             icon={Users}
             iconBg="blue"
           />
           <KpiCard
             title="En retard"
-            value={stats.today.late}
+            value={currentStats.today.late}
             icon={Clock}
             iconBg="dark"
           />
           <KpiCard
             title="Absents"
-            value={stats.today.absent}
+            value={currentStats.today.absent}
             icon={AlertCircle}
             iconBg="black"
           />
           <KpiCard
             title="Congés en attente"
-            value={stats.pending_leave}
+            value={currentStats.pending_leave}
             icon={Calendar}
+            iconBg="dark"
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+          <KpiCard
+            title="Changements de repos"
+            value={currentStats.pending_day_off_changes}
+            icon={CalendarOff}
             iconBg="dark"
           />
         </div>
@@ -103,26 +98,26 @@ export function AdminDashboardClient() {
         <p className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Ce mois</p>
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-surface rounded-xl px-4 py-3 shadow-softer text-center">
-            <p className="text-2xl font-bold text-ink">{stats.month.present}</p>
+            <p className="text-2xl font-bold text-ink">{currentStats.month.present}</p>
             <p className="text-caption text-muted mt-0.5">Présences</p>
           </div>
           <div className="bg-surface rounded-xl px-4 py-3 shadow-softer text-center">
-            <p className="text-2xl font-bold text-trend-down">{stats.month.late}</p>
+            <p className="text-2xl font-bold text-trend-down">{currentStats.month.late}</p>
             <p className="text-caption text-muted mt-0.5">Retards</p>
           </div>
           <div className="bg-surface rounded-xl px-4 py-3 shadow-softer text-center">
-            <p className="text-2xl font-bold text-trend-down">{stats.month.absent}</p>
+            <p className="text-2xl font-bold text-trend-down">{currentStats.month.absent}</p>
             <p className="text-caption text-muted mt-0.5">Absences</p>
           </div>
         </div>
       </div>
 
       {/* Recent activity */}
-      {stats.recent_activity.length > 0 && (
+      {currentStats.recent_activity.length > 0 && (
         <div>
           <p className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Activité récente</p>
           <div className="bg-surface rounded-xl shadow-softer overflow-hidden">
-            {stats.recent_activity.map((log) => (
+            {currentStats.recent_activity.map((log) => (
               <div key={log.id} className="flex items-center justify-between px-4 py-3 border-b border-soft last:border-0">
                 <div>
                   <p className="text-sm font-medium text-ink">

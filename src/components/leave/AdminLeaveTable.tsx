@@ -1,16 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Check, X as XIcon, Trash2 } from 'lucide-react';
+import { Plus, Check, Pencil, X as XIcon, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
 import { AdminLeaveDialog } from './AdminLeaveDialog';
-import type { LeaveRequest, Profile } from '@/types';
+import type { LeaveRequestListItem, Profile } from '@/types';
 import { formatInTimeZone } from 'date-fns-tz';
-
-type LeaveWithProfile = LeaveRequest & {
-  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
-};
 
 const TYPE_LABEL: Record<string, string> = {
   annual: 'Congé annuel',
@@ -38,13 +34,13 @@ function daysBetween(start: string, end: string): number {
 }
 
 interface Props {
-  initialRequests: LeaveWithProfile[];
+  initialRequests: LeaveRequestListItem[];
   employees: Pick<Profile, 'id' | 'full_name'>[];
 }
 
 export function AdminLeaveTable({ initialRequests, employees }: Props) {
-  const [requests, setRequests] = useState<LeaveWithProfile[]>(initialRequests);
-  const [showDialog, setShowDialog] = useState(false);
+  const [requests, setRequests] = useState<LeaveRequestListItem[]>(initialRequests);
+  const [editTarget, setEditTarget] = useState<LeaveRequestListItem | 'new' | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   async function handleReview(
@@ -80,9 +76,14 @@ export function AdminLeaveTable({ initialRequests, employees }: Props) {
     setRequests((prev) => prev.filter((r) => r.id !== id));
   }
 
-  function handleCreated(req: LeaveWithProfile) {
+  function handleCreated(req: LeaveRequestListItem) {
     setRequests((prev) => [req, ...prev]);
-    setShowDialog(false);
+    setEditTarget(null);
+  }
+
+  function handleSaved(req: LeaveRequestListItem) {
+    setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, ...req } : r)));
+    setEditTarget(null);
   }
 
   const statusFilter = ['all', 'pending', 'approved', 'rejected', 'cancelled'] as const;
@@ -111,7 +112,7 @@ export function AdminLeaveTable({ initialRequests, employees }: Props) {
         </div>
         <button
           type="button"
-          onClick={() => setShowDialog(true)}
+          onClick={() => setEditTarget('new')}
           className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-white font-semibold text-sm hover:opacity-90 transition"
         >
           <Plus size={16} />
@@ -183,6 +184,14 @@ export function AdminLeaveTable({ initialRequests, employees }: Props) {
                         )}
                         <button
                           type="button"
+                          onClick={() => setEditTarget(req)}
+                          className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-soft transition"
+                          aria-label="Modifier"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDelete(req.id)}
                           className="p-1.5 rounded-lg text-muted hover:text-trend-down hover:bg-trend-down/10 transition"
                           aria-label="Supprimer"
@@ -199,11 +208,12 @@ export function AdminLeaveTable({ initialRequests, employees }: Props) {
         )}
       </div>
 
-      {showDialog && (
+      {editTarget !== null && (
         <AdminLeaveDialog
+          request={editTarget === 'new' ? null : editTarget}
           employees={employees}
-          onClose={() => setShowDialog(false)}
-          onSuccess={handleCreated}
+          onClose={() => setEditTarget(null)}
+          onSuccess={editTarget === 'new' ? handleCreated : handleSaved}
         />
       )}
     </>

@@ -1,13 +1,14 @@
-import { requireAdmin } from '@/lib/auth/guards';
 import { createServiceClient } from '@/lib/supabase/service';
+import { timeAsync } from '@/lib/perf/timing';
 import { SettingsForm } from '@/components/admin/SettingsForm';
 import type { OfficeSettings } from '@/types';
 
 export default async function AdminSettingsPage() {
-  await requireAdmin();
   const service = createServiceClient();
 
-  const { data } = await service.from('office_settings').select('*').single();
+  const { data } = await timeAsync('page.admin.settings.data', () =>
+    service.from('office_settings').select('*').single(),
+  );
   const settings = data as OfficeSettings | null;
 
   if (!settings) {

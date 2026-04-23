@@ -1,39 +1,49 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Attendance, Profile } from '@/types';
-import { formatInTimeZone } from 'date-fns-tz';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { differenceInMinutes } from 'date-fns';
+import type { AttendanceListItem, Profile } from '@/types';
 
-type AttendanceWithProfile = Attendance & {
-  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
-};
+const OFFICE_TZ = 'Africa/Tunis';
 
 interface Props {
-  record: AttendanceWithProfile | null;
-  employees: Pick<Profile, 'id' | 'full_name'>[];
+  record: AttendanceListItem | null;
+  employees: Pick<Profile, 'id' | 'full_name' | 'work_start_time'>[];
+  gracePeriodMinutes: number;
   onClose: () => void;
-  onSuccess: (saved: AttendanceWithProfile) => void;
+  onSuccess: (saved: AttendanceListItem) => void;
 }
 
 type FormData = {
   user_id: string;
   date: string;
-  status: 'present' | 'late' | 'absent' | 'leave' | 'holiday';
+  status: 'present' | 'late' | 'absent' | 'leave' | 'holiday' | 'day_off';
   check_in_at: string;
   check_out_at: string;
   late_minutes: number;
   note: string;
 };
 
-export function AttendanceEditDialog({ record, employees, onClose, onSuccess }: Props) {
+function calcLateMinutesLocal(workStartTime: string, checkInLocal: string): number {
+  // checkInLocal: 'yyyy-MM-ddTHH:mm' — treat as Tunis local time
+  const dateStr = checkInLocal.slice(0, 10);
+  const startUTC = fromZonedTime(`${dateStr} ${workStartTime.slice(0, 5)}`, OFFICE_TZ);
+  const checkInUTC = fromZonedTime(checkInLocal.replace('T', ' '), OFFICE_TZ);
+  return differenceInMinutes(checkInUTC, startUTC);
+}
+
+export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, onClose, onSuccess }: Props) {
   const isEdit = !!record;
 
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     defaultValues: isEdit
@@ -42,23 +52,40 @@ export function AttendanceEditDialog({ record, employees, onClose, onSuccess }: 
           date: record.date,
           status: record.status,
           check_in_at: record.check_in_at
-            ? formatInTimeZone(new Date(record.check_in_at), 'Africa/Tunis', "yyyy-MM-dd'T'HH:mm")
+            ? formatInTimeZone(new Date(record.check_in_at), OFFICE_TZ, "yyyy-MM-dd'T'HH:mm")
             : '',
           check_out_at: record.check_out_at
-            ? formatInTimeZone(new Date(record.check_out_at), 'Africa/Tunis', "yyyy-MM-dd'T'HH:mm")
+            ? formatInTimeZone(new Date(record.check_out_at), OFFICE_TZ, "yyyy-MM-dd'T'HH:mm")
             : '',
           late_minutes: record.late_minutes ?? 0,
           note: record.note ?? '',
         }
       : {
           status: 'present',
-          date: formatInTimeZone(new Date(), 'Africa/Tunis', 'yyyy-MM-dd'),
+          date: formatInTimeZone(new Date(), OFFICE_TZ, 'yyyy-MM-dd'),
           check_in_at: '',
           check_out_at: '',
           late_minutes: 0,
           note: '',
         },
   });
+
+  const checkInAt = useWatch({ control, name: 'check_in_at' });
+  const userId = useWatch({ control, name: 'user_id' });
+
+  useEffect(() => {
+    if (!checkInAt) return;
+
+    const workStartTime = isEdit
+      ? record.profiles?.work_start_time
+      : employees.find((e) => e.id === userId)?.work_start_time;
+
+    if (!workStartTime) return;
+
+    const lateMin = calcLateMinutesLocal(workStartTime, checkInAt);
+    setValue('late_minutes', lateMin, { shouldDirty: true });
+    setValue('status', lateMin > gracePeriodMinutes ? 'late' : 'present', { shouldDirty: true });
+  }, [checkInAt, userId, isEdit, record, employees, gracePeriodMinutes, setValue]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -95,7 +122,7 @@ export function AttendanceEditDialog({ record, employees, onClose, onSuccess }: 
     }
 
     toast.success(isEdit ? 'Présence mise à jour' : 'Présence créée');
-    onSuccess(json as AttendanceWithProfile);
+    onSuccess(json as AttendanceListItem);
   }
 
   return (
@@ -140,6 +167,7 @@ export function AttendanceEditDialog({ record, employees, onClose, onSuccess }: 
               <option value="absent">Absent</option>
               <option value="leave">En congé</option>
               <option value="holiday">Jour férié</option>
+              <option value="day_off">Jour de repos</option>
             </select>
           </Field>
 
@@ -153,7 +181,7 @@ export function AttendanceEditDialog({ record, employees, onClose, onSuccess }: 
           </div>
 
           <Field label="Retard (min)" error={errors.late_minutes?.message}>
-            <input {...register('late_minutes')} type="number" min={0} className={inputCls} />
+            <input {...register('late_minutes')} type="number" className={inputCls} />
           </Field>
 
           <Field label="Note" error={errors.note?.message}>

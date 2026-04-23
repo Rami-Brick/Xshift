@@ -1,21 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Menu, X, LayoutDashboard, Users, Clock,
-  CalendarDays, BarChart2, Settings, ScrollText, LogOut,
+  CalendarDays, CalendarOff, BarChart2, Settings, ScrollText, LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { logout } from '@/lib/auth/actions';
 
-type NavKey = 'dashboard' | 'employees' | 'attendance' | 'leave' | 'reports' | 'settings' | 'logs';
+type NavKey =
+  | 'dashboard'
+  | 'employees'
+  | 'attendance'
+  | 'leave'
+  | 'day-off'
+  | 'reports'
+  | 'settings'
+  | 'logs';
 
 const NAV_ITEMS: { key: NavKey; icon: React.ElementType; label: string }[] = [
   { key: 'dashboard',  icon: LayoutDashboard, label: 'Tableau de bord' },
   { key: 'employees',  icon: Users,           label: 'Employés' },
   { key: 'attendance', icon: Clock,           label: 'Présences' },
   { key: 'leave',      icon: CalendarDays,    label: 'Congés' },
+  { key: 'day-off',    icon: CalendarOff,     label: 'Jours de repos' },
   { key: 'reports',    icon: BarChart2,        label: 'Rapports' },
   { key: 'settings',   icon: Settings,         label: 'Paramètres' },
   { key: 'logs',       icon: ScrollText,       label: 'Journal' },
@@ -26,6 +36,7 @@ const KEY_TO_PATH: Record<NavKey, string> = {
   employees:  '/admin/employees',
   attendance: '/admin/attendance',
   leave:      '/admin/leave',
+  'day-off':  '/admin/day-off',
   reports:    '/admin/reports',
   settings:   '/admin/settings',
   logs:       '/admin/logs',
@@ -34,12 +45,6 @@ const KEY_TO_PATH: Record<NavKey, string> = {
 export function AdminMobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-
-  function navigate(key: NavKey) {
-    router.push(KEY_TO_PATH[key]);
-    setOpen(false);
-  }
 
   return (
     <>
@@ -91,10 +96,12 @@ export function AdminMobileHeader() {
           {NAV_ITEMS.map(({ key, icon: Icon, label }) => {
             const active = pathname.startsWith(KEY_TO_PATH[key]);
             return (
-              <button
+              <Link
                 key={key}
-                type="button"
-                onClick={() => navigate(key)}
+                href={KEY_TO_PATH[key]}
+                prefetch
+                onClick={() => setOpen(false)}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium transition',
                   active
@@ -104,7 +111,7 @@ export function AdminMobileHeader() {
               >
                 <Icon size={18} strokeWidth={active ? 2.25 : 2} />
                 {label}
-              </button>
+              </Link>
             );
           })}
         </nav>

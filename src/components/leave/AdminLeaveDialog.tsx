@@ -6,21 +6,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminLeaveSchema, type AdminLeaveInput } from '@/lib/validation/leave';
-import type { LeaveRequest, Profile } from '@/types';
+import type { LeaveRequestListItem, Profile } from '@/types';
 import { formatInTimeZone } from 'date-fns-tz';
 
-type LeaveWithProfile = LeaveRequest & {
-  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
-};
-
 interface Props {
+  request?: LeaveRequestListItem | null;
   employees: Pick<Profile, 'id' | 'full_name'>[];
   onClose: () => void;
-  onSuccess: (req: LeaveWithProfile) => void;
+  onSuccess: (req: LeaveRequestListItem) => void;
 }
 
-export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
+export function AdminLeaveDialog({ request, employees, onClose, onSuccess }: Props) {
   const today = formatInTimeZone(new Date(), 'Africa/Tunis', 'yyyy-MM-dd');
+  const isEdit = !!request;
 
   const {
     register,
@@ -28,13 +26,24 @@ export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<AdminLeaveInput>({
     resolver: zodResolver(adminLeaveSchema),
-    defaultValues: {
-      start_date: today,
-      end_date: today,
-      type: 'annual',
-      status: 'approved',
-      deduct_balance: true,
-    },
+    defaultValues: isEdit
+      ? {
+          user_id: request.user_id,
+          start_date: request.start_date,
+          end_date: request.end_date,
+          type: request.type,
+          status: request.status,
+          reason: request.reason ?? '',
+          admin_note: request.admin_note ?? '',
+          deduct_balance: request.deduct_balance,
+        }
+      : {
+          start_date: today,
+          end_date: today,
+          type: 'annual',
+          status: 'approved',
+          deduct_balance: true,
+        },
   });
 
   useEffect(() => {
@@ -46,8 +55,8 @@ export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
   }, [onClose]);
 
   async function onSubmit(data: AdminLeaveInput) {
-    const res = await fetch('/api/leave/all', {
-      method: 'POST',
+    const res = await fetch(isEdit ? `/api/leave/${request.id}` : '/api/leave/all', {
+      method: isEdit ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
@@ -56,8 +65,8 @@ export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
       toast.error(json.error ?? 'Une erreur est survenue');
       return;
     }
-    toast.success('Congé assigné');
-    onSuccess(json as LeaveWithProfile);
+    toast.success(isEdit ? 'Congé mis à jour' : 'Congé assigné');
+    onSuccess(json as LeaveRequestListItem);
   }
 
   return (
@@ -65,7 +74,9 @@ export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-canvas rounded-2xl shadow-soft w-full max-w-md overflow-y-auto max-h-[90vh]">
         <div className="flex items-center justify-between p-5 border-b border-soft">
-          <h2 className="text-base font-semibold text-ink">Assigner un congé</h2>
+          <h2 className="text-base font-semibold text-ink">
+            {isEdit ? 'Modifier le congé' : 'Assigner un congé'}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -78,7 +89,7 @@ export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
         <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
           <Field label="Employé" error={errors.user_id?.message}>
             <select {...register('user_id')} className={inputCls}>
-              <option value="">Choisir…</option>
+              <option value="">Choisir...</option>
               {employees.map((e) => (
                 <option key={e.id} value={e.id}>{e.full_name}</option>
               ))}
@@ -105,9 +116,15 @@ export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
 
           <Field label="Statut" error={errors.status?.message}>
             <select {...register('status')} className={inputCls}>
-              <option value="approved">Approuvé</option>
               <option value="pending">En attente</option>
+              <option value="approved">Approuvé</option>
+              <option value="rejected">Refusé</option>
+              <option value="cancelled">Annulé</option>
             </select>
+          </Field>
+
+          <Field label="Motif" error={errors.reason?.message}>
+            <textarea {...register('reason')} rows={2} className={`${inputCls} resize-none`} />
           </Field>
 
           <Field label="Note admin" error={errors.admin_note?.message}>
@@ -132,7 +149,7 @@ export function AdminLeaveDialog({ employees, onClose, onSuccess }: Props) {
               disabled={isSubmitting}
               className="px-5 py-2 rounded-xl bg-brand text-white font-semibold text-sm hover:opacity-90 transition disabled:opacity-60"
             >
-              {isSubmitting ? 'Assignation…' : 'Assigner'}
+              {isSubmitting ? 'Enregistrement...' : isEdit ? 'Enregistrer' : 'Assigner'}
             </button>
           </div>
         </form>

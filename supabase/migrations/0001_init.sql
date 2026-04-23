@@ -48,8 +48,6 @@ create table public.profiles (
   full_name text not null,
   email text not null unique,
   phone text,
-  position text,
-  department text,
   role public.user_role not null default 'employee',
   work_start_time time not null default '08:30',
   work_end_time time not null default '17:30',

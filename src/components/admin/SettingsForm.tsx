@@ -21,6 +21,7 @@ interface Props {
 
 export function SettingsForm({ settings }: Props) {
   const [locating, setLocating] = useState(false);
+  const [lastCapturedAccuracy, setLastCapturedAccuracy] = useState<number | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([
     settings.office_latitude,
     settings.office_longitude,
@@ -52,6 +53,7 @@ export function SettingsForm({ settings }: Props) {
   const lat = watch('office_latitude');
   const lng = watch('office_longitude');
   const radius = watch('allowed_radius_meters');
+  const gpsLimit = watch('gps_accuracy_limit_meters');
 
   async function captureGPS() {
     setLocating(true);
@@ -63,10 +65,18 @@ export function SettingsForm({ settings }: Props) {
           maximumAge: 0,
         }),
       );
-      const { latitude, longitude } = pos.coords;
+      const { latitude, longitude, accuracy } = pos.coords;
+      const roundedAccuracy = Math.round(accuracy);
+      const suggestedLimit = Math.min(Math.max(roundedAccuracy, 10), 2000);
       setValue('office_latitude', latitude, { shouldDirty: true });
       setValue('office_longitude', longitude, { shouldDirty: true });
+      setLastCapturedAccuracy(roundedAccuracy);
       setMapCenter([latitude, longitude]);
+      if (roundedAccuracy > Number(gpsLimit)) {
+        setValue('gps_accuracy_limit_meters', suggestedLimit, { shouldDirty: true });
+        toast(`Précision GPS max ajustée à ${suggestedLimit} m`);
+        return;
+      }
       toast.success('Position capturée');
     } catch {
       toast.error('GPS indisponible');
@@ -156,9 +166,15 @@ export function SettingsForm({ settings }: Props) {
             <input {...register('allowed_radius_meters')} type="number" min={10} max={2000} className={inputCls} />
           </Field>
           <Field label="Précision GPS max (m)" error={errors.gps_accuracy_limit_meters?.message}>
-            <input {...register('gps_accuracy_limit_meters')} type="number" min={10} max={500} className={inputCls} />
+            <input {...register('gps_accuracy_limit_meters')} type="number" min={10} max={2000} className={inputCls} />
           </Field>
         </div>
+
+        {lastCapturedAccuracy !== null && (
+          <p className="text-caption text-muted">
+            Dernière précision capturée : {lastCapturedAccuracy} m. Le pointage est refusé si la précision du navigateur dépasse la limite GPS max.
+          </p>
+        )}
 
         <MapPreview center={mapCenter} radius={radius} />
       </section>

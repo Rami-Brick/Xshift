@@ -30,7 +30,6 @@ export function EmployeeDetailActions({ employee }: Props) {
     }
     toast.success('Employé désactivé');
     router.push('/admin/employees');
-    router.refresh();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

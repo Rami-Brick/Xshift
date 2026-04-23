@@ -5,6 +5,9 @@ import { adminLeaveSchema } from '@/lib/validation/leave';
 import { logActivity } from '@/lib/activity/log';
 import { eachDayOfInterval, parseISO } from 'date-fns';
 
+const LEAVE_SELECT =
+  'id, user_id, start_date, end_date, type, status, reason, admin_note, deduct_balance, created_at, updated_at, profiles!leave_requests_user_id_fkey(id, full_name, email)';
+
 export async function GET(request: NextRequest) {
   await requireAdmin();
   const service = createServiceClient();
@@ -15,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   let query = service
     .from('leave_requests')
-    .select('*, profiles!leave_requests_user_id_fkey(id, full_name, email)')
+    .select(LEAVE_SELECT)
     .order('created_at', { ascending: false })
     .limit(200);
 
@@ -71,7 +74,7 @@ export async function POST(request: NextRequest) {
       reviewed_by: actorId,
       reviewed_at: new Date().toISOString(),
     })
-    .select()
+    .select(LEAVE_SELECT)
     .single();
 
   if (error) {

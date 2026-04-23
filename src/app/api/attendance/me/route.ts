@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('attendance')
-    .select('*')
+    .select('id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout')
     .eq('user_id', user.id)
     .order('date', { ascending: false });
 

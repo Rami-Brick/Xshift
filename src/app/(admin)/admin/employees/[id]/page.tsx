@@ -1,5 +1,5 @@
-import { requireAdmin } from '@/lib/auth/guards';
 import { createServiceClient } from '@/lib/supabase/service';
+import { timeAsync } from '@/lib/perf/timing';
 import { notFound } from 'next/navigation';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
   absent: 'Absent',
   leave: 'En congé',
   holiday: 'Jour férié',
+  day_off: 'Jour de repos',
 };
 
 function statusChip(status: string): 'lime' | 'trendDown' | 'neutral' {
@@ -30,7 +31,6 @@ interface PageProps {
 }
 
 export default async function AdminEmployeeDetailPage({ params }: PageProps) {
-  await requireAdmin();
   const { id } = await params;
   const service = createServiceClient();
 
@@ -38,8 +38,14 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
   const monthStart = formatInTimeZone(startOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
   const monthEnd = formatInTimeZone(endOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
 
-  const [{ data: profile }, { data: monthRecords }, { data: recent }] = await Promise.all([
-    service.from('profiles').select('*').eq('id', id).single(),
+  const [{ data: profile }, { data: monthRecords }, { data: recent }] = await timeAsync('page.admin.employee.detail.data', () => Promise.all([
+    service
+      .from('profiles')
+      .select(
+        'id, full_name, email, phone, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
+      )
+      .eq('id', id)
+      .single(),
     service
       .from('attendance')
       .select('status, late_minutes')
@@ -48,11 +54,11 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
       .lte('date', monthEnd),
     service
       .from('attendance')
-      .select('*')
+      .select('id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout')
       .eq('user_id', id)
       .order('date', { ascending: false })
       .limit(10),
-  ]);
+  ]));
 
   if (!profile) notFound();
 
@@ -73,7 +79,6 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
             {!p.is_active && <Chip variant="dark">Inactif</Chip>}
           </div>
           <p className="text-sm text-muted mt-0.5">{p.email}</p>
-          {p.position && <p className="text-sm text-muted">{p.position}{p.department ? ` · ${p.department}` : ''}</p>}
         </div>
         <EmployeeDetailActions employee={p} />
       </div>

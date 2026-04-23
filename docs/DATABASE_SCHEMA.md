@@ -46,8 +46,6 @@ create table public.profiles (
   full_name text not null,
   email text not null unique,
   phone text,
-  position text,
-  department text,
   role public.user_role not null default 'employee',
   work_start_time time not null default '08:30',
   work_end_time time not null default '17:30',
@@ -309,8 +307,6 @@ export interface Profile {
   full_name: string;
   email: string;
   phone: string | null;
-  position: string | null;
-  department: string | null;
   role: Role;
   work_start_time: string;
   work_end_time: string;
