@@ -42,7 +42,7 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
     service
       .from('profiles')
       .select(
-        'id, full_name, email, phone, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
+        'id, full_name, email, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at',
       )
       .eq('id', id)
       .single(),
@@ -87,7 +87,6 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <InfoCard label="Horaire" value={`${p.work_start_time} → ${p.work_end_time}`} />
         <InfoCard label="Solde congés" value={`${p.leave_balance} j`} />
-        <InfoCard label="Téléphone" value={p.phone ?? '—'} />
         <InfoCard label="Présences ce mois" value={String(presentCount)} />
         <InfoCard label="Retards ce mois" value={String(lateCount)} />
         <InfoCard label="Membre depuis" value={formatInTimeZone(new Date(p.created_at), OFFICE_TZ, 'dd MMM yyyy')} />

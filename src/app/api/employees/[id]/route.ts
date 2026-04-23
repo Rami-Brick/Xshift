@@ -5,7 +5,7 @@ import { updateEmployeeSchema } from '@/lib/validation/employee';
 import { logActivity } from '@/lib/activity/log';
 
 const PROFILE_SELECT =
-  'id, full_name, email, phone, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at';
+  'id, full_name, email, role, work_start_time, work_end_time, leave_balance, default_day_off, is_active, avatar_url, created_at, updated_at';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
