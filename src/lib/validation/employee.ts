@@ -4,7 +4,7 @@ import { dayOfWeekSchema } from '@/lib/validation/day-off';
 export const createEmployeeSchema = z.object({
   full_name: z.string().min(2, 'Nom requis (min. 2 caractères)'),
   email: z.string().email('Email invalide'),
-  password: z.string().min(6, 'Mot de passe requis (min. 6 caractères)'),
+  password: z.string().min(4, 'Mot de passe requis (min. 4 caractères)'),
   phone: z.string().optional(),
   work_start_time: z
     .string()

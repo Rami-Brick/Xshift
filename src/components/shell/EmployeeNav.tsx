@@ -1,13 +1,13 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Clock, CalendarDays, CalendarOff } from 'lucide-react';
+import { Home, Clock, CalendarDays, CalendarOff } from 'lucide-react';
 import { BottomNavBar, type BottomNavItemSpec } from '@/design-kit/compounds/BottomNavBar';
 
 type NavKey = 'dashboard' | 'history' | 'leave' | 'day-off';
 
 const NAV_ITEMS: BottomNavItemSpec<NavKey>[] = [
-  { key: 'dashboard', icon: LayoutDashboard, label: 'Accueil', href: '/dashboard' },
+  { key: 'dashboard', icon: Home,            label: 'Home', href: '/dashboard' },
   { key: 'history',   icon: Clock,           label: 'Historique', href: '/history' },
   { key: 'leave',     icon: CalendarDays,    label: 'Congés', href: '/leave' },
   { key: 'day-off',   icon: CalendarOff,     label: 'Repos', href: '/day-off' },
@@ -29,7 +29,7 @@ export function EmployeeNav() {
       items={NAV_ITEMS}
       activeKey={activeKey}
       variant="static"
-      className="w-full justify-center"
+      className="justify-center opacity-120"
     />
   );
 }
