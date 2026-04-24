@@ -14,7 +14,7 @@ export interface SideNavItemSpec<K extends string = string> {
 
 export interface SideNavRailProps<K extends string = string> {
   items: SideNavItemSpec<K>[];
-  activeKey: K;
+  activeKey: K | null;
   onChange?: (key: K) => void;
   brand?: React.ReactNode;
   footer?: React.ReactNode;

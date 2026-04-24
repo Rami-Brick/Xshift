@@ -34,6 +34,8 @@ export { SquircleTile } from './primitives/SquircleTile';
 export type { SquircleTileProps } from './primitives/SquircleTile';
 export { BottomNavItem } from './primitives/BottomNavItem';
 export type { BottomNavItemProps } from './primitives/BottomNavItem';
+export { BottomSheet } from './primitives/BottomSheet';
+export type { BottomSheetProps } from './primitives/BottomSheet';
 
 // Compounds
 export { AppHeader } from './compounds/AppHeader';

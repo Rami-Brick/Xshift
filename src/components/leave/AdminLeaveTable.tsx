@@ -5,6 +5,7 @@ import { Plus, Check, Pencil, X as XIcon, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
 import { AdminLeaveDialog } from './AdminLeaveDialog';
+import { AdminLeaveMobileCard } from './AdminLeaveMobileCard';
 import type { LeaveRequestListItem, Profile } from '@/types';
 import { formatInTimeZone } from 'date-fns-tz';
 
@@ -121,7 +122,29 @@ export function AdminLeaveTable({ initialRequests, employees, canDelete }: Props
         </button>
       </div>
 
-      <div className="bg-surface rounded-xl shadow-softer overflow-hidden">
+      {/* Mobile list */}
+      <div className="md:hidden">
+        {visible.length === 0 ? (
+          <div className="bg-surface rounded-xl shadow-softer p-8 text-center text-muted text-sm">Aucune demande</div>
+        ) : (
+          <div className="space-y-2">
+            {visible.map((req) => (
+              <AdminLeaveMobileCard
+                key={req.id}
+                req={req}
+                canDelete={canDelete}
+                actionLoading={actionLoading}
+                onReview={handleReview}
+                onEdit={setEditTarget}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-surface rounded-xl shadow-softer overflow-hidden">
         {visible.length === 0 ? (
           <div className="p-8 text-center text-muted text-sm">Aucune demande</div>
         ) : (
