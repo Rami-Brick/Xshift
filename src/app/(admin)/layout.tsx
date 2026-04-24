@@ -24,10 +24,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </main>
       </div>
 
-      {/* Mobile: top bar + drawer + content */}
+      {/* Mobile: top bar + bottom nav + content */}
       <div className="md:hidden flex flex-col min-h-screen">
-        <AdminMobileHeader role={profile.role} />
-        <main className="flex-1 overflow-y-auto p-4">
+        <AdminMobileHeader role={profile.role} fullName={profile.full_name} />
+        <main className="flex-1 overflow-y-auto pt-20 px-4 pb-28">
           {children}
         </main>
       </div>

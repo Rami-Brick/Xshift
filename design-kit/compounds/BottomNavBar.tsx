@@ -11,7 +11,7 @@ export interface BottomNavItemSpec<K extends string = string> {
 
 export interface BottomNavBarProps<K extends string = string> {
   items: BottomNavItemSpec<K>[];
-  activeKey: K;
+  activeKey: K | null;
   onChange?: (key: K) => void;
   /** Positioning strategy: "floating" absolutely-positions inside a relative parent (MobileFrame). */
   variant?: 'floating' | 'static';

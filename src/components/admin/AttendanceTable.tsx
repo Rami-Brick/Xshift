@@ -176,7 +176,75 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
         ) : records.length === 0 ? (
           <div className="p-8 text-center text-muted text-sm">Aucune présence pour cette période</div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y divide-soft">
+            {records.map((row) => {
+              const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
+              const m = row.late_minutes ?? 0;
+              return (
+                <div key={row.id} className="px-4 py-3 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-ink text-sm leading-tight">
+                      {row.profiles?.full_name ?? '—'}
+                      {row.forgot_checkout && (
+                        <span className="ml-2 text-caption text-trend-down">Oubli</span>
+                      )}
+                    </span>
+                    <Chip variant={statusVariant(row.status)}>
+                      {STATUS_LABEL[row.status] ?? row.status}
+                    </Chip>
+                  </div>
+                  <span className="text-xs text-muted">{formatDate(row.date)}</span>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-muted">
+                        Arrivée {formatTime(row.check_in_at) ?? '—'} · Départ {formatTime(row.check_out_at) ?? '—'}
+                      </span>
+                      <span className="text-xs">
+                        {m < 0 && <span className="text-trend-up">{m} min</span>}
+                        {m > gracePeriodMinutes && <span className="text-trend-down">Retard +{m} min</span>}
+                        {m > 0 && m <= gracePeriodMinutes && <span className="text-muted">+{m} min</span>}
+                        {m === 0 && row.device_label && (
+                          <span className={isSuspect ? 'text-amber-600' : 'text-muted'} title={isSuspect ? 'Appareil partagé — fraude possible' : undefined}>
+                            {row.device_label}{isSuspect && ' ⚠'}
+                          </span>
+                        )}
+                        {m !== 0 && row.device_label && (
+                          <span className={`ml-2 ${isSuspect ? 'text-amber-600' : 'text-muted'}`} title={isSuspect ? 'Appareil partagé — fraude possible' : undefined}>
+                            · {row.device_label}{isSuspect && ' ⚠'}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setEditTarget(row)}
+                        className="p-2 rounded-lg text-muted hover:text-ink hover:bg-soft transition"
+                        aria-label="Modifier"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(row)}
+                          className="p-2 rounded-lg text-trend-down hover:bg-trend-down/10 transition"
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-soft text-left">
@@ -258,6 +326,7 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

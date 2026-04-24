@@ -109,7 +109,75 @@ export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props
         {visible.length === 0 ? (
           <div className="p-8 text-center text-muted text-sm">Aucun changement</div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y divide-soft">
+            {visible.map((c) => (
+              <div key={c.id} className="px-4 py-3 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-ink text-sm leading-tight">
+                    {c.profiles?.full_name ?? '—'}
+                  </span>
+                  <Chip variant={statusVariant(c.status)}>
+                    {STATUS_LABEL[c.status] ?? c.status}
+                  </Chip>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <span>S{c.iso_week} / {c.iso_year}</span>
+                  <span>·</span>
+                  <span>{DAY_OFF_LABELS_FR[c.old_day]} → {DAY_OFF_LABELS_FR[c.new_day]}</span>
+                </div>
+                {c.reason && (
+                  <span className="text-xs text-muted truncate">{c.reason}</span>
+                )}
+                <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                  {c.status === 'pending' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleReview(c.id, 'approved')}
+                        disabled={actionLoading === c.id + 'approved'}
+                        className="p-2 rounded-lg text-trend-up hover:bg-trend-up/10 transition disabled:opacity-40"
+                        aria-label="Approuver"
+                      >
+                        <Check size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReview(c.id, 'rejected')}
+                        disabled={actionLoading === c.id + 'rejected'}
+                        className="p-2 rounded-lg text-trend-down hover:bg-trend-down/10 transition disabled:opacity-40"
+                        aria-label="Refuser"
+                      >
+                        <XIcon size={16} />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setEditTarget(c)}
+                    className="p-2 rounded-lg text-muted hover:text-ink hover:bg-soft transition"
+                    aria-label="Modifier"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(c.id)}
+                      className="p-2 rounded-lg text-muted hover:text-trend-down hover:bg-trend-down/10 transition"
+                      aria-label="Supprimer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-soft text-left">
@@ -203,6 +271,7 @@ export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
