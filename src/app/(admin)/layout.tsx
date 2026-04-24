@@ -1,6 +1,7 @@
 import { requireStaffCached } from '@/lib/auth/guards';
 import { AdminSidebar } from '@/components/shell/AdminSidebar';
-import { AdminMobileHeader } from '@/components/shell/AdminDrawer';
+import { AdminMobileTopBar } from '@/components/shell/AdminDrawer';
+import { AdminBottomNav } from '@/components/shell/AdminBottomNav';
 import { AdminTopBar } from '@/components/shell/AdminTopBar';
 import type { ReactNode } from 'react';
 
@@ -24,12 +25,13 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </main>
       </div>
 
-      {/* Mobile: top bar + drawer + content */}
+      {/* Mobile: top bar + content + floating bottom nav */}
       <div className="md:hidden flex flex-col min-h-screen">
-        <AdminMobileHeader role={profile.role} />
-        <main className="flex-1 overflow-y-auto p-4">
+        <AdminMobileTopBar role={profile.role} />
+        <main className="flex-1 overflow-y-auto p-4 pb-28">
           {children}
         </main>
+        <AdminBottomNav role={profile.role} />
       </div>
     </div>
   );
