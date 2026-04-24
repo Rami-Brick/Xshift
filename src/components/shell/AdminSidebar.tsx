@@ -27,11 +27,11 @@ const KEY_TO_PATH: Record<NavKey, string> = {
   reports:    '/admin/reports',
 };
 
-function pathToKey(pathname: string): NavKey {
+function pathToKey(pathname: string): NavKey | null {
   for (const [key, path] of Object.entries(KEY_TO_PATH)) {
     if (pathname.startsWith(path)) return key as NavKey;
   }
-  return 'dashboard';
+  return null;
 }
 
 export function AdminSidebar() {
