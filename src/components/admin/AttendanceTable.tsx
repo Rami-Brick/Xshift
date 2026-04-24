@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
@@ -38,6 +38,13 @@ interface AttendanceTableProps {
   canDelete: boolean;
 }
 
+interface AttendanceActionProps {
+  row: AttendanceListItem;
+  canDelete: boolean;
+  onEdit: (row: AttendanceListItem) => void;
+  onDelete: (row: AttendanceListItem) => void;
+}
+
 function buildSuspectDevices(records: AttendanceListItem[]): Set<string> {
   const deviceToEmployees = new Map<string, Set<string>>();
   for (const r of records) {
@@ -51,6 +58,129 @@ function buildSuspectDevices(records: AttendanceListItem[]): Set<string> {
     if (set.size > 1) suspects.add(id);
   }
   return suspects;
+}
+
+function LateMinutesValue({
+  minutes,
+  gracePeriodMinutes,
+}: {
+  minutes: number | null | undefined;
+  gracePeriodMinutes: number;
+}) {
+  const m = minutes ?? 0;
+  if (m < 0) return <span className="text-trend-up">{m} min</span>;
+  if (m > gracePeriodMinutes) return <span className="text-trend-down">+{m} min</span>;
+  if (m > 0) return <span className="text-muted">+{m} min</span>;
+  return <span className="text-muted">—</span>;
+}
+
+function MobileDetail({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="rounded-xl bg-canvas px-3 py-2">
+      <dt className="text-caption font-medium text-muted">{label}</dt>
+      <dd className="mt-0.5 text-sm font-semibold text-ink">{children}</dd>
+    </div>
+  );
+}
+
+function AttendanceActions({ row, canDelete, onEdit, onDelete }: AttendanceActionProps) {
+  return (
+    <div className="flex items-center gap-2 justify-end">
+      <button
+        type="button"
+        onClick={() => onEdit(row)}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-soft hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/40"
+        aria-label="Modifier"
+      >
+        <Pencil size={14} aria-hidden="true" />
+      </button>
+      {canDelete && (
+        <button
+          type="button"
+          onClick={() => onDelete(row)}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-trend-down transition hover:bg-trend-down/10 focus-visible:ring-2 focus-visible:ring-brand/40"
+          aria-label="Supprimer"
+        >
+          <Trash2 size={14} aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function AttendanceMobileCard({
+  row,
+  isSuspect,
+  gracePeriodMinutes,
+  canDelete,
+  onEdit,
+  onDelete,
+}: AttendanceActionProps & {
+  isSuspect: boolean;
+  gracePeriodMinutes: number;
+}) {
+  return (
+    <article className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold text-ink">
+            {row.profiles?.full_name ?? '—'}
+          </h2>
+          <p className="mt-0.5 text-caption text-muted">{formatDate(row.date)}</p>
+        </div>
+        <Chip variant={statusVariant(row.status)} className="shrink-0">
+          {STATUS_LABEL[row.status] ?? row.status}
+        </Chip>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-2 gap-2">
+        <MobileDetail label="Arrivée">{formatTime(row.check_in_at)}</MobileDetail>
+        <MobileDetail label="Départ">{formatTime(row.check_out_at)}</MobileDetail>
+        <MobileDetail label="Retard">
+          <LateMinutesValue
+            minutes={row.late_minutes}
+            gracePeriodMinutes={gracePeriodMinutes}
+          />
+        </MobileDetail>
+        <MobileDetail label="Date">{formatDate(row.date)}</MobileDetail>
+      </dl>
+
+      {(row.forgot_checkout || row.device_label) && (
+        <div className="mt-3 space-y-2 text-caption">
+          {row.forgot_checkout && (
+            <p className="rounded-xl bg-trend-down/10 px-3 py-2 font-medium text-trend-down">
+              Oubli de départ
+            </p>
+          )}
+          {row.device_label && (
+            <p
+              className={cnDeviceMessage(isSuspect)}
+              title={isSuspect ? 'Appareil partagé — fraude possible' : undefined}
+            >
+              {isSuspect && <AlertTriangle size={14} aria-hidden="true" />}
+              <span className="min-w-0 truncate">{row.device_label}</span>
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex justify-end">
+        <AttendanceActions
+          row={row}
+          canDelete={canDelete}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      </div>
+    </article>
+  );
+}
+
+function cnDeviceMessage(isSuspect: boolean) {
+  return [
+    'flex items-center gap-2 rounded-xl px-3 py-2 font-medium',
+    isSuspect ? 'bg-accent-star/15 text-amber-700' : 'bg-canvas text-muted',
+  ].join(' ');
 }
 
 export function AttendanceTable({ initialRecords, employees, initialFilters, gracePeriodMinutes, canDelete }: AttendanceTableProps) {
@@ -110,31 +240,31 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
   return (
     <>
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 bg-surface rounded-xl p-4 shadow-softer">
-        <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-1 gap-3 rounded-xl bg-surface p-4 shadow-softer sm:grid-cols-2 md:flex md:flex-wrap">
+        <div className="flex min-w-0 flex-col gap-1">
           <label className="text-caption text-muted">Du</label>
           <input
             type="date"
             value={filters.start ?? ''}
             onChange={(e) => applyFilters({ ...filters, start: e.target.value })}
-            className="rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+            className="w-full rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/40"
           />
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label className="text-caption text-muted">Au</label>
           <input
             type="date"
             value={filters.end ?? ''}
             onChange={(e) => applyFilters({ ...filters, end: e.target.value })}
-            className="rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+            className="w-full rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/40"
           />
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label className="text-caption text-muted">Employé</label>
           <select
             value={filters.user_id ?? ''}
             onChange={(e) => applyFilters({ ...filters, user_id: e.target.value || undefined })}
-            className="rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+            className="w-full rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/40"
           >
             <option value="">Tous</option>
             {employees.map((e) => (
@@ -142,12 +272,12 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label className="text-caption text-muted">Statut</label>
           <select
             value={filters.status ?? ''}
             onChange={(e) => applyFilters({ ...filters, status: e.target.value || undefined })}
-            className="rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+            className="w-full rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus-visible:ring-2 focus-visible:ring-brand/40"
           >
             <option value="">Tous</option>
             <option value="present">Présent</option>
@@ -157,107 +287,106 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
             <option value="holiday">Jour férié</option>
           </select>
         </div>
-        <div className="flex items-end ml-auto">
+        <div className="flex items-end md:ml-auto">
           <button
             type="button"
             onClick={() => setEditTarget('new')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-white font-semibold text-sm hover:opacity-90 transition"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-brand/40 md:w-auto"
           >
-            <Plus size={16} />
+            <Plus size={16} aria-hidden="true" />
             Ajouter
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-surface rounded-xl shadow-softer overflow-hidden">
+      {/* Table/list */}
+      <div className="overflow-hidden rounded-xl bg-surface shadow-softer">
         {loading ? (
-          <div className="p-8 text-center text-muted text-sm">Chargement…</div>
+          <div className="p-8 text-center text-sm text-muted">Chargement…</div>
         ) : records.length === 0 ? (
-          <div className="p-8 text-center text-muted text-sm">Aucune présence pour cette période</div>
+          <div className="p-8 text-center text-sm text-muted">Aucune présence pour cette période</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-soft text-left">
-                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Date</th>
-                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Employé</th>
-                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Arrivée</th>
-                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Départ</th>
-                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Statut</th>
-                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Retard</th>
-                  <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Appareil</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((row) => {
-                  const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
-                  return (
-                  <tr key={row.id} className="border-b border-soft last:border-0 hover:bg-canvas/50 transition">
-                    <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">{formatDate(row.date)}</td>
-                    <td className="px-4 py-3 text-ink whitespace-nowrap">
-                      {row.profiles?.full_name ?? '—'}
-                      {row.forgot_checkout && (
-                        <span className="ml-2 text-caption text-trend-down">Oubli</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-muted whitespace-nowrap">{formatTime(row.check_in_at)}</td>
-                    <td className="px-4 py-3 text-muted whitespace-nowrap">{formatTime(row.check_out_at)}</td>
-                    <td className="px-4 py-3">
-                      <Chip variant={statusVariant(row.status)}>
-                        {STATUS_LABEL[row.status] ?? row.status}
-                      </Chip>
-                    </td>
-                    <td className="px-4 py-3 text-muted">
-                      {(() => {
-                        const m = row.late_minutes ?? 0;
-                        if (m < 0) return <span className="text-trend-up">{m} min</span>;
-                        if (m > gracePeriodMinutes) return <span className="text-trend-down">+{m} min</span>;
-                        if (m > 0) return <span className="text-muted">+{m} min</span>;
-                        return <span className="text-muted">—</span>;
-                      })()}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {row.device_label ? (
-                        <span
-                          className={isSuspect ? 'text-amber-600 font-medium text-xs' : 'text-muted text-xs'}
-                          title={isSuspect ? 'Appareil partagé — fraude possible' : undefined}
-                        >
-                          {row.device_label}{isSuspect && ' ⚠'}
-                        </span>
-                      ) : (
-                        <span className="text-muted text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2 justify-end">
-                        <button
-                          type="button"
-                          onClick={() => setEditTarget(row)}
-                          className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-soft transition"
-                          aria-label="Modifier"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(row)}
-                            className="p-1.5 rounded-lg text-trend-down hover:bg-trend-down/10 transition"
-                            aria-label="Supprimer"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="divide-y divide-soft md:hidden">
+              {records.map((row) => (
+                <AttendanceMobileCard
+                  key={row.id}
+                  row={row}
+                  isSuspect={!!row.device_id && suspectDevices.has(row.device_id)}
+                  gracePeriodMinutes={gracePeriodMinutes}
+                  canDelete={canDelete}
+                  onEdit={setEditTarget}
+                  onDelete={setDeleteTarget}
+                />
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-soft text-left">
+                    <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Date</th>
+                    <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Employé</th>
+                    <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Arrivée</th>
+                    <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Départ</th>
+                    <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Statut</th>
+                    <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Retard</th>
+                    <th className="px-4 py-3 text-caption font-semibold text-muted uppercase tracking-wide">Appareil</th>
+                    <th className="px-4 py-3" />
                   </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {records.map((row) => {
+                    const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
+                    return (
+                      <tr key={row.id} className="border-b border-soft last:border-0 hover:bg-canvas/50 transition">
+                        <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">{formatDate(row.date)}</td>
+                        <td className="px-4 py-3 text-ink whitespace-nowrap">
+                          {row.profiles?.full_name ?? '—'}
+                          {row.forgot_checkout && (
+                            <span className="ml-2 text-caption text-trend-down">Oubli</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-muted whitespace-nowrap">{formatTime(row.check_in_at)}</td>
+                        <td className="px-4 py-3 text-muted whitespace-nowrap">{formatTime(row.check_out_at)}</td>
+                        <td className="px-4 py-3">
+                          <Chip variant={statusVariant(row.status)}>
+                            {STATUS_LABEL[row.status] ?? row.status}
+                          </Chip>
+                        </td>
+                        <td className="px-4 py-3 text-muted">
+                          <LateMinutesValue
+                            minutes={row.late_minutes}
+                            gracePeriodMinutes={gracePeriodMinutes}
+                          />
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {row.device_label ? (
+                            <span
+                              className={isSuspect ? 'text-amber-600 font-medium text-xs' : 'text-muted text-xs'}
+                              title={isSuspect ? 'Appareil partagé — fraude possible' : undefined}
+                            >
+                              {row.device_label}{isSuspect && ' !'}
+                            </span>
+                          ) : (
+                            <span className="text-muted text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <AttendanceActions
+                            row={row}
+                            canDelete={canDelete}
+                            onEdit={setEditTarget}
+                            onDelete={setDeleteTarget}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -277,7 +406,7 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
           <div className="relative bg-canvas rounded-2xl shadow-soft w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-trend-down/10 flex items-center justify-center">
-                <AlertTriangle size={18} className="text-trend-down" />
+                <AlertTriangle size={18} className="text-trend-down" aria-hidden="true" />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-ink">Supprimer cette présence ?</h2>
@@ -292,7 +421,7 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
                 type="button"
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleteLoading}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-muted hover:text-ink hover:bg-soft transition"
+                className="px-4 py-2 rounded-xl text-sm font-medium text-muted hover:text-ink hover:bg-soft transition focus-visible:ring-2 focus-visible:ring-brand/40"
               >
                 Annuler
               </button>
@@ -300,7 +429,7 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
                 type="button"
                 onClick={confirmDelete}
                 disabled={deleteLoading}
-                className="px-5 py-2 rounded-xl bg-trend-down text-white font-semibold text-sm hover:opacity-90 transition disabled:opacity-60"
+                className="px-5 py-2 rounded-xl bg-trend-down text-white font-semibold text-sm hover:opacity-90 transition disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-brand/40"
               >
                 {deleteLoading ? 'Suppression…' : 'Supprimer'}
               </button>
