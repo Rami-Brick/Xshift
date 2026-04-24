@@ -1,10 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
 import { AttendanceEditDialog } from './AttendanceEditDialog';
+import { AttendanceMobileCard } from './AttendanceMobileCard';
+import { AttendanceFiltersSheet } from './AttendanceFiltersSheet';
 import { formatTime, formatDate } from '@/lib/attendance/status';
 import type { AttendanceListItem, Profile } from '@/types';
 
@@ -61,6 +63,8 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
   const [editTarget, setEditTarget] = useState<AttendanceListItem | 'new' | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AttendanceListItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = (filters.start ? 1 : 0) + (filters.end ? 1 : 0) + (filters.user_id ? 1 : 0) + (filters.status ? 1 : 0);
 
   async function applyFilters(next: Filters) {
     setFilters(next);
@@ -109,8 +113,33 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
 
   return (
     <>
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 bg-surface rounded-xl p-4 shadow-softer">
+      {/* Mobile filter bar */}
+      <div className="md:hidden flex items-center gap-2 mb-3">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface text-ink font-medium text-sm shadow-softer hover:bg-soft transition"
+        >
+          <SlidersHorizontal size={16} />
+          Filtrer
+          {activeFilterCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-brand text-white text-[11px] font-semibold">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditTarget('new')}
+          className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-white font-semibold text-sm hover:opacity-90 transition"
+        >
+          <Plus size={16} />
+          Ajouter
+        </button>
+      </div>
+
+      {/* Desktop filters */}
+      <div className="hidden md:flex flex-wrap gap-3 bg-surface rounded-xl p-4 shadow-softer">
         <div className="flex flex-col gap-1">
           <label className="text-caption text-muted">Du</label>
           <input
@@ -169,8 +198,34 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-surface rounded-xl shadow-softer overflow-hidden">
+      {/* Mobile list */}
+      <div className="md:hidden">
+        {loading ? (
+          <div className="bg-surface rounded-xl shadow-softer p-8 text-center text-muted text-sm">Chargement…</div>
+        ) : records.length === 0 ? (
+          <div className="bg-surface rounded-xl shadow-softer p-8 text-center text-muted text-sm">Aucune présence pour cette période</div>
+        ) : (
+          <div className="space-y-2">
+            {records.map((row) => {
+              const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
+              return (
+                <AttendanceMobileCard
+                  key={row.id}
+                  row={row}
+                  suspect={isSuspect}
+                  gracePeriodMinutes={gracePeriodMinutes}
+                  canDelete={canDelete}
+                  onEdit={setEditTarget}
+                  onDelete={setDeleteTarget}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-surface rounded-xl shadow-softer overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-muted text-sm">Chargement…</div>
         ) : records.length === 0 ? (
@@ -260,6 +315,14 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
           </div>
         )}
       </div>
+
+      <AttendanceFiltersSheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        filters={filters}
+        employees={employees}
+        onApply={applyFilters}
+      />
 
       {editTarget !== null && (
         <AttendanceEditDialog

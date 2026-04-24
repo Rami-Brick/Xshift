@@ -5,6 +5,7 @@ import { Plus, Check, Pencil, X as XIcon, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
 import { AdminDayOffDialog } from './AdminDayOffDialog';
+import { AdminDayOffMobileCard } from './AdminDayOffMobileCard';
 import { DAY_OFF_LABELS_FR } from '@/lib/day-off/weeks';
 import type { DayOffChangeListItem, Profile } from '@/types';
 
@@ -105,7 +106,29 @@ export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props
         </button>
       </div>
 
-      <div className="bg-surface rounded-xl shadow-softer overflow-hidden">
+      {/* Mobile list */}
+      <div className="md:hidden">
+        {visible.length === 0 ? (
+          <div className="bg-surface rounded-xl shadow-softer p-8 text-center text-muted text-sm">Aucun changement</div>
+        ) : (
+          <div className="space-y-2">
+            {visible.map((c) => (
+              <AdminDayOffMobileCard
+                key={c.id}
+                change={c}
+                canDelete={canDelete}
+                actionLoading={actionLoading}
+                onReview={handleReview}
+                onEdit={setEditTarget}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-surface rounded-xl shadow-softer overflow-hidden">
         {visible.length === 0 ? (
           <div className="p-8 text-center text-muted text-sm">Aucun changement</div>
         ) : (
