@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { canEditEmployeeWorkData, canManageEmployeeAccounts } from '@/lib/auth/roles';
 import { EmployeeFormDialog } from './EmployeeFormDialog';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { ConfirmActionDialog } from './ConfirmActionDialog';
 import type { Profile, Role } from '@/types';
 
 interface Props {
@@ -17,24 +18,23 @@ interface Props {
 export function EmployeeDetailActions({ employee, viewerRole }: Props) {
   const [showEdit, setShowEdit] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
   const router = useRouter();
   const canEdit = canEditEmployeeWorkData(viewerRole);
   const canManageAccounts = canManageEmployeeAccounts(viewerRole);
 
-  async function handleDeactivate() {
-    if (!confirming) {
-      setConfirming(true);
-      return;
-    }
+  async function handleDeactivateConfirm() {
+    setDeactivateLoading(true);
     const res = await fetch(`/api/employees/${employee.id}`, { method: 'DELETE' });
     const json = await res.json();
+    setDeactivateLoading(false);
     if (!res.ok) {
       toast.error(json.error ?? 'Erreur lors de la désactivation');
-      setConfirming(false);
       return;
     }
     toast.success('Employé désactivé');
+    setConfirmDeactivate(false);
     router.push('/admin/employees');
   }
 
@@ -47,7 +47,7 @@ export function EmployeeDetailActions({ employee, viewerRole }: Props) {
 
   return (
     <>
-      <div className="flex gap-2 shrink-0">
+      <div className="flex flex-wrap gap-2 shrink-0 w-full md:w-auto">
         {canEdit && (
           <button
             type="button"
@@ -71,15 +71,11 @@ export function EmployeeDetailActions({ employee, viewerRole }: Props) {
         {canManageAccounts && employee.is_active && (
           <button
             type="button"
-            onClick={handleDeactivate}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition ${
-              confirming
-                ? 'bg-trend-down text-white'
-                : 'bg-surface shadow-softer text-trend-down hover:bg-trend-down/10'
-            }`}
+            onClick={() => setConfirmDeactivate(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition bg-surface shadow-softer text-trend-down hover:bg-trend-down/10"
           >
             <UserX size={14} />
-            {confirming ? 'Confirmer ?' : 'Désactiver'}
+            Désactiver
           </button>
         )}
       </div>
@@ -98,6 +94,19 @@ export function EmployeeDetailActions({ employee, viewerRole }: Props) {
           employeeId={employee.id}
           employeeName={employee.full_name}
           onClose={() => setShowPassword(false)}
+        />
+      )}
+
+      {confirmDeactivate && (
+        <ConfirmActionDialog
+          title="Désactiver cet employé ?"
+          detail={employee.full_name}
+          description="Le compte ne pourra plus se connecter. Les données existantes seront conservées."
+          confirmLabel="Désactiver"
+          loadingLabel="Désactivation..."
+          loading={deactivateLoading}
+          onCancel={() => setConfirmDeactivate(false)}
+          onConfirm={handleDeactivateConfirm}
         />
       )}
     </>

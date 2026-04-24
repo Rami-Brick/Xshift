@@ -77,16 +77,18 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <InitialAvatar name={p.full_name} size={56} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold text-ink tracking-tight">{p.full_name}</h1>
-            {p.role === 'admin' && <Chip variant="brand">Admin</Chip>}
-            {p.role === 'manager' && <Chip variant="dark">Manager</Chip>}
-            {!p.is_active && <Chip variant="dark">Inactif</Chip>}
+      <div className="flex flex-col gap-4 md:flex-row md:items-start">
+        <div className="flex items-start gap-4 min-w-0 flex-1">
+          <InitialAvatar name={p.full_name} size={56} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-ink tracking-tight break-words">{p.full_name}</h1>
+              {p.role === 'admin' && <Chip variant="brand">Admin</Chip>}
+              {p.role === 'manager' && <Chip variant="dark">Manager</Chip>}
+              {!p.is_active && <Chip variant="dark">Inactif</Chip>}
+            </div>
+            <p className="text-sm text-muted mt-0.5 break-words">{p.email}</p>
           </div>
-          <p className="text-sm text-muted mt-0.5">{p.email}</p>
         </div>
         <EmployeeDetailActions employee={p} viewerRole={viewer.role} />
       </div>

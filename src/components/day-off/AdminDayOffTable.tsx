@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Plus, Check, Pencil, X as XIcon, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
+import { ConfirmActionDialog } from '@/components/admin/ConfirmActionDialog';
 import { AdminDayOffDialog } from './AdminDayOffDialog';
 import { AdminDayOffMobileCard } from './AdminDayOffMobileCard';
 import { DAY_OFF_LABELS_FR } from '@/lib/day-off/weeks';
@@ -32,7 +33,9 @@ interface Props {
 export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props) {
   const [changes, setChanges] = useState<DayOffChangeListItem[]>(initialChanges);
   const [editTarget, setEditTarget] = useState<DayOffChangeListItem | 'new' | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DayOffChangeListItem | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function handleReview(id: string, status: 'approved' | 'rejected') {
     setActionLoading(id + status);
@@ -52,15 +55,24 @@ export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props
     setActionLoading(null);
   }
 
-  async function handleDelete(id: string) {
-    const res = await fetch(`/api/day-off/${id}`, { method: 'DELETE' });
+  function requestDelete(id: string) {
+    const change = changes.find((item) => item.id === id);
+    if (change) setDeleteTarget(change);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    const res = await fetch(`/api/day-off/${deleteTarget.id}`, { method: 'DELETE' });
     const json = await res.json();
+    setDeleteLoading(false);
     if (!res.ok) {
       toast.error(json.error ?? 'Erreur');
       return;
     }
     toast.success('Changement supprimé');
-    setChanges((prev) => prev.filter((c) => c.id !== id));
+    setChanges((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+    setDeleteTarget(null);
   }
 
   function handleCreated(change: DayOffChangeListItem) {
@@ -120,7 +132,7 @@ export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props
                 actionLoading={actionLoading}
                 onReview={handleReview}
                 onEdit={setEditTarget}
-                onDelete={handleDelete}
+                onDelete={requestDelete}
               />
             ))}
           </div>
@@ -212,7 +224,7 @@ export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props
                         {canDelete && (
                           <button
                             type="button"
-                            onClick={() => handleDelete(c.id)}
+                            onClick={() => setDeleteTarget(c)}
                             className="p-1.5 rounded-lg text-muted hover:text-trend-down hover:bg-trend-down/10 transition"
                             aria-label="Supprimer"
                           >
@@ -235,6 +247,18 @@ export function AdminDayOffTable({ initialChanges, employees, canDelete }: Props
           employees={employees}
           onClose={() => setEditTarget(null)}
           onSuccess={editTarget === 'new' ? handleCreated : handleSaved}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmActionDialog
+          title="Supprimer cette demande de repos ?"
+          detail={`${deleteTarget.profiles?.full_name ?? '—'} · S${deleteTarget.iso_week} / ${deleteTarget.iso_year}`}
+          confirmLabel="Supprimer"
+          loadingLabel="Suppression..."
+          loading={deleteLoading}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
         />
       )}
     </>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Plus, Check, Pencil, X as XIcon, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Chip } from '@/design-kit/primitives/Chip';
+import { ConfirmActionDialog } from '@/components/admin/ConfirmActionDialog';
 import { AdminLeaveDialog } from './AdminLeaveDialog';
 import { AdminLeaveMobileCard } from './AdminLeaveMobileCard';
 import type { LeaveRequestListItem, Profile } from '@/types';
@@ -43,7 +44,9 @@ interface Props {
 export function AdminLeaveTable({ initialRequests, employees, canDelete }: Props) {
   const [requests, setRequests] = useState<LeaveRequestListItem[]>(initialRequests);
   const [editTarget, setEditTarget] = useState<LeaveRequestListItem | 'new' | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LeaveRequestListItem | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function handleReview(
     id: string,
@@ -67,15 +70,24 @@ export function AdminLeaveTable({ initialRequests, employees, canDelete }: Props
     setActionLoading(null);
   }
 
-  async function handleDelete(id: string) {
-    const res = await fetch(`/api/leave/${id}`, { method: 'DELETE' });
+  function requestDelete(id: string) {
+    const req = requests.find((item) => item.id === id);
+    if (req) setDeleteTarget(req);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    const res = await fetch(`/api/leave/${deleteTarget.id}`, { method: 'DELETE' });
     const json = await res.json();
+    setDeleteLoading(false);
     if (!res.ok) {
       toast.error(json.error ?? 'Erreur');
       return;
     }
     toast.success('Demande supprimée');
-    setRequests((prev) => prev.filter((r) => r.id !== id));
+    setRequests((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+    setDeleteTarget(null);
   }
 
   function handleCreated(req: LeaveRequestListItem) {
@@ -136,7 +148,7 @@ export function AdminLeaveTable({ initialRequests, employees, canDelete }: Props
                 actionLoading={actionLoading}
                 onReview={handleReview}
                 onEdit={setEditTarget}
-                onDelete={handleDelete}
+                onDelete={requestDelete}
               />
             ))}
           </div>
@@ -217,7 +229,7 @@ export function AdminLeaveTable({ initialRequests, employees, canDelete }: Props
                         {canDelete && (
                           <button
                             type="button"
-                            onClick={() => handleDelete(req.id)}
+                            onClick={() => setDeleteTarget(req)}
                             className="p-1.5 rounded-lg text-muted hover:text-trend-down hover:bg-trend-down/10 transition"
                             aria-label="Supprimer"
                           >
@@ -240,6 +252,18 @@ export function AdminLeaveTable({ initialRequests, employees, canDelete }: Props
           employees={employees}
           onClose={() => setEditTarget(null)}
           onSuccess={editTarget === 'new' ? handleCreated : handleSaved}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmActionDialog
+          title="Supprimer cette demande de congé ?"
+          detail={`${deleteTarget.profiles?.full_name ?? '—'} · ${formatInTimeZone(new Date(deleteTarget.start_date + 'T00:00'), 'Africa/Tunis', 'dd/MM/yyyy')}`}
+          confirmLabel="Supprimer"
+          loadingLabel="Suppression..."
+          loading={deleteLoading}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
         />
       )}
     </>
