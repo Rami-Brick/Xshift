@@ -18,7 +18,27 @@ type Status =
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
-export function NotificationPermissionButton() {
+type Variant = 'dropdown' | 'sheet';
+
+interface Props {
+  variant?: Variant;
+}
+
+const STYLES: Record<Variant, { base: string; muted: string; iconSize: number }> = {
+  dropdown: {
+    base: 'flex w-full items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition disabled:opacity-60',
+    muted: 'flex w-full items-center gap-3 px-4 py-2.5 text-sm text-muted opacity-60',
+    iconSize: 15,
+  },
+  sheet: {
+    base: 'flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium text-ink hover:bg-soft transition disabled:opacity-60',
+    muted: 'flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium text-muted opacity-60',
+    iconSize: 18,
+  },
+};
+
+export function NotificationPermissionButton({ variant = 'dropdown' }: Props = {}) {
+  const styles = STYLES[variant];
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [status, setStatus] = useState<Status>({ kind: 'loading' });
   const [busy, setBusy] = useState(false);
@@ -99,12 +119,8 @@ export function NotificationPermissionButton() {
 
   if (status.kind === 'loading') {
     return (
-      <button
-        type="button"
-        disabled
-        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-muted opacity-60"
-      >
-        <Bell size={15} className="text-muted" />
+      <button type="button" disabled className={styles.muted}>
+        <Bell size={styles.iconSize} className="text-muted" />
         Chargement...
       </button>
     );
@@ -115,10 +131,10 @@ export function NotificationPermissionButton() {
       <button
         type="button"
         disabled
-        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-muted opacity-60"
+        className={styles.muted}
         title="Notifications non disponibles dans ce navigateur"
       >
-        <BellOff size={15} className="text-muted" />
+        <BellOff size={styles.iconSize} className="text-muted" />
         Notifications indisponibles
       </button>
     );
@@ -129,10 +145,10 @@ export function NotificationPermissionButton() {
       <button
         type="button"
         disabled
-        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-muted opacity-60"
+        className={styles.muted}
         title="Réactivez les notifications dans les paramètres du navigateur"
       >
-        <BellOff size={15} className="text-muted" />
+        <BellOff size={styles.iconSize} className="text-muted" />
         Notifications bloquées
       </button>
     );
@@ -144,9 +160,9 @@ export function NotificationPermissionButton() {
         type="button"
         onClick={handleDisable}
         disabled={busy}
-        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition disabled:opacity-60"
+        className={styles.base}
       >
-        <BellOff size={15} className="text-muted" />
+        <BellOff size={styles.iconSize} className="text-muted" />
         {busy ? 'Désactivation...' : 'Désactiver les notifications'}
       </button>
     );
@@ -157,9 +173,9 @@ export function NotificationPermissionButton() {
       type="button"
       onClick={handleEnable}
       disabled={busy}
-      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition disabled:opacity-60"
+      className={styles.base}
     >
-      <Bell size={15} className="text-muted" />
+      <Bell size={styles.iconSize} className="text-muted" />
       {busy ? 'Activation...' : 'Activer les notifications'}
     </button>
   );

@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { BottomSheet } from '@/design-kit/primitives/BottomSheet';
 import { logout } from '@/lib/auth/actions';
-import { canAccessLogs, canAccessSettings } from '@/lib/auth/roles';
+import { canAccessLogs, canAccessSettings, isStaffRole } from '@/lib/auth/roles';
+import { NotificationPermissionButton } from '@/components/notifications/NotificationPermissionButton';
 import { cn } from '@/lib/utils/cn';
 import type { Role } from '@/types';
 
@@ -67,6 +68,11 @@ export function MobileNavMoreSheet({ role, open, onClose }: MobileNavMoreSheetPr
           );
         })}
       </nav>
+      {isStaffRole(role) && (
+        <div className="px-3 pb-2 pt-1">
+          <NotificationPermissionButton variant="sheet" />
+        </div>
+      )}
       <div className="px-3 pb-3 pt-2 border-t border-soft">
         <form action={logout}>
           <button
