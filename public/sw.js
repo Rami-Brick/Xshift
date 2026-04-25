@@ -40,6 +40,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (
+    self.location.hostname === 'localhost' ||
+    self.location.hostname === '127.0.0.1'
+  ) {
+    return;
+  }
+
   const url = new URL(request.url);
 
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) {
@@ -64,6 +71,58 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
         return response;
       });
+    }),
+  );
+});
+
+self.addEventListener('push', (event) => {
+  const fallback = {
+    title: 'Xshift',
+    body: 'Nouvelle notification',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    url: '/admin/dashboard',
+  };
+
+  let payload = fallback;
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch (_err) {
+      payload = fallback;
+    }
+  }
+
+  const title = payload.title || fallback.title;
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: payload.body || fallback.body,
+      icon: payload.icon || fallback.icon,
+      badge: payload.badge || fallback.badge,
+      tag: payload.tag || 'xshift-notification',
+      data: {
+        url: payload.url || fallback.url,
+        ...(payload.data || {}),
+      },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || '/admin/dashboard';
+  const targetUrl = new URL(url, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url === targetUrl && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(targetUrl);
     }),
   );
 });

@@ -216,3 +216,19 @@ export type DayOffChangeListItem = Pick<
 > & {
   profiles?: Pick<Profile, 'id' | 'full_name' | 'email'>;
 };
+
+export interface PushSubscriptionRecord {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string | null;
+  device_label: string | null;
+  enabled: boolean;
+  last_success_at: string | null;
+  last_failure_at: string | null;
+  failure_count: number;
+  created_at: string;
+  updated_at: string;
+}

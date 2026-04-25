@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Settings, ScrollText, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { logout } from '@/lib/auth/actions';
-import { canAccessLogs, canAccessSettings, staffRoleLabel } from '@/lib/auth/roles';
+import { canAccessLogs, canAccessSettings, isStaffRole, staffRoleLabel } from '@/lib/auth/roles';
+import { NotificationPermissionButton } from '@/components/notifications/NotificationPermissionButton';
 import type { Role } from '@/types';
 
 interface AdminTopBarProps {
@@ -71,6 +72,7 @@ export function AdminTopBar({ fullName, role }: AdminTopBarProps) {
                   Journal
                 </Link>
               )}
+              {isStaffRole(role) && <NotificationPermissionButton />}
             </div>
             <div className="py-1 border-t border-soft">
               <form action={logout}>

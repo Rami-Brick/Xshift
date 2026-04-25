@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { haversineDistance } from '@/lib/attendance/geo';
 import { calcLateMinutes, resolveStatus } from '@/lib/attendance/status';
 import { logActivity } from '@/lib/activity/log';
+import { notifyStaffOfCheckIn } from '@/lib/notifications/attendance';
 import { todayDateInOffice } from '@/lib/utils/date';
 import {
   dayOfWeekEnum,
@@ -11,6 +12,8 @@ import {
   isoWeekForNow,
 } from '@/lib/day-off/weeks';
 import type { DayOfWeek } from '@/types';
+
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
       .single(),
     service
       .from('profiles')
-      .select('work_start_time, default_day_off')
+      .select('full_name, work_start_time, default_day_off')
       .eq('id', user.id)
       .single(),
     service
@@ -138,24 +141,28 @@ export async function POST(request: NextRequest) {
   const lateMinutes = calcLateMinutes(profile.work_start_time, gracePeriod, now);
   const status = resolveStatus(lateMinutes, gracePeriod);
 
-  const { error: upsertError } = await service.from('attendance').upsert(
-    {
-      user_id: user.id,
-      date: today,
-      check_in_at: now.toISOString(),
-      status,
-      late_minutes: lateMinutes,
-      check_in_latitude: latitude,
-      check_in_longitude: longitude,
-      check_in_accuracy_meters: accuracy,
-      check_in_distance_meters: distanceM,
-      forgot_checkout: false,
-      ...(typeof device_id === 'string' && device_id ? { device_id, device_label: device_label ?? null } : {}),
-    },
-    { onConflict: 'user_id,date' },
-  );
+  const { data: upserted, error: upsertError } = await service
+    .from('attendance')
+    .upsert(
+      {
+        user_id: user.id,
+        date: today,
+        check_in_at: now.toISOString(),
+        status,
+        late_minutes: lateMinutes,
+        check_in_latitude: latitude,
+        check_in_longitude: longitude,
+        check_in_accuracy_meters: accuracy,
+        check_in_distance_meters: distanceM,
+        forgot_checkout: false,
+        ...(typeof device_id === 'string' && device_id ? { device_id, device_label: device_label ?? null } : {}),
+      },
+      { onConflict: 'user_id,date' },
+    )
+    .select('id')
+    .single();
 
-  if (upsertError) {
+  if (upsertError || !upserted) {
     return NextResponse.json({ error: 'Erreur lors du pointage' }, { status: 500 });
   }
 
@@ -165,6 +172,18 @@ export async function POST(request: NextRequest) {
     targetUserId: user.id,
     details: { date: today, status, late_minutes: lateMinutes, distance_m: distanceM },
   });
+
+  try {
+    await notifyStaffOfCheckIn({
+      employeeId: user.id,
+      employeeName: profile.full_name,
+      attendanceId: upserted.id,
+      checkInAt: now,
+      status,
+    });
+  } catch (notifyError) {
+    console.error('[checkin] notification dispatch failed', notifyError);
+  }
 
   return NextResponse.json({ success: true, status, late_minutes: lateMinutes });
 }
