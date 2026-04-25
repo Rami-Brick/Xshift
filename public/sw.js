@@ -80,7 +80,7 @@ self.addEventListener('push', (event) => {
     title: 'Xshift',
     body: 'Nouvelle notification',
     icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    badge: '/icons/status-bar.png',
     url: '/admin/dashboard',
   };
 
