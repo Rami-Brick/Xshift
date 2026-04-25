@@ -128,31 +128,75 @@ for each row execute function public.set_updated_at();
 Recommended RLS policies:
 
 ```sql
-create policy "push_subscriptions_select_own"
+create policy "push_subscriptions_select_own_staff"
 on public.push_subscriptions
 for select
 to authenticated
-using (user_id = (select auth.uid()));
+using (
+  user_id = (select auth.uid())
+  and exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid())
+      and p.role in ('manager', 'admin')
+      and p.is_active = true
+  )
+);
 
-create policy "push_subscriptions_insert_own"
+create policy "push_subscriptions_insert_own_staff"
 on public.push_subscriptions
 for insert
 to authenticated
-with check (user_id = (select auth.uid()));
+with check (
+  user_id = (select auth.uid())
+  and exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid())
+      and p.role in ('manager', 'admin')
+      and p.is_active = true
+  )
+);
 
-create policy "push_subscriptions_update_own"
+create policy "push_subscriptions_update_own_staff"
 on public.push_subscriptions
 for update
 to authenticated
-using (user_id = (select auth.uid()))
-with check (user_id = (select auth.uid()));
+using (
+  user_id = (select auth.uid())
+  and exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid())
+      and p.role in ('manager', 'admin')
+      and p.is_active = true
+  )
+)
+with check (
+  user_id = (select auth.uid())
+  and exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid())
+      and p.role in ('manager', 'admin')
+      and p.is_active = true
+  )
+);
 
-create policy "push_subscriptions_delete_own"
+create policy "push_subscriptions_delete_own_staff"
 on public.push_subscriptions
 for delete
 to authenticated
-using (user_id = (select auth.uid()));
+using (
+  user_id = (select auth.uid())
+  and exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid())
+      and p.role in ('manager', 'admin')
+      and p.is_active = true
+  )
+);
 ```
+
+**Why staff-only at the RLS layer:** the API route's role check is a UX gate, not a security boundary. An employee with a valid session could call `supabase.from('push_subscriptions').insert(...)` directly from the browser and bypass the route entirely. Pinning role and `is_active` into the RLS policies makes the table itself enforce v1's "staff only" acceptance criterion.
+
+**Trade-off:** if a user's role is downgraded from staff to employee, their existing subscriptions become invisible to them via RLS (they cannot delete them through the normal API). The notification sender uses the service role and filters by current `profiles.role`, so downgraded users will stop receiving notifications immediately — that is the correct behavior. Periodic cleanup of orphaned subscriptions can be added later if needed.
 
 The notification sender should use the service role and should only target users whose `profiles.role in ('manager', 'admin')` and `profiles.is_active = true`.
 
@@ -264,6 +308,49 @@ notifyStaffOfCheckIn({
 });
 ```
 
+**Critical: filter by current staff status in the query, not in app code.**
+
+The RLS policies already restrict who can write to `push_subscriptions`, but the *sender* uses the service role and bypasses RLS. If a manager is downgraded to employee, their old `push_subscriptions` rows still exist (and they should — RLS makes the rows invisible to the user, but the rows are not deleted). The sender must filter against `profiles` at query time so downgraded users stop receiving pushes immediately.
+
+Use a single inner-join query so the filter is enforced by the database, not by post-fetch JavaScript:
+
+```ts
+const service = createServiceClient();
+
+const { data, error } = await service
+  .from('push_subscriptions')
+  .select(`
+    id,
+    user_id,
+    endpoint,
+    p256dh,
+    auth,
+    failure_count,
+    profiles!inner (
+      id,
+      role,
+      is_active
+    )
+  `)
+  .eq('enabled', true)
+  .eq('profiles.is_active', true)
+  .in('profiles.role', ['manager', 'admin']);
+```
+
+Why `!inner`: the default `profiles(...)` join would return subscriptions with `profiles: null` for users who somehow have no profile row, and the `.eq` / `.in` filters on the joined table only filter the *embedded data*, not the parent rows — meaning subscriptions for non-staff would still come back with `profiles: null`. The `!inner` modifier turns it into a true inner join: parent rows with no matching `profiles` (or where `profiles` is filtered out) are excluded entirely.
+
+**Do not** do this:
+
+```ts
+// WRONG: fetches all enabled subscriptions, filters in JS.
+// If the profiles fetch fails or is forgotten, every push_subscriptions row gets a notification.
+const { data: subs } = await service.from('push_subscriptions').select('*').eq('enabled', true);
+const { data: profiles } = await service.from('profiles').select('id, role, is_active');
+const staff = subs.filter(s => profiles.find(p => p.id === s.user_id && ...));
+```
+
+The wrong pattern silently fails open if the profiles fetch errors out — the safe pattern is to make the database do the filter, and any error propagates as zero subscriptions returned.
+
 ### `src/app/api/notifications/subscribe/route.ts`
 
 Authenticated route to save or update the current user's push subscription.
@@ -274,7 +361,7 @@ Behavior:
 - Load profile using normal Supabase server client.
 - Reject inactive users.
 - Reject employees if v1 only supports staff recipients.
-- Accept `endpoint`, `keys.p256dh`, `keys.auth`, optional `device_label`.
+- Validate request body against the Zod schema below.
 - Upsert by `endpoint`.
 - Set `enabled = true`.
 - Return `{ success: true }`.
@@ -283,6 +370,55 @@ Important:
 
 - This route should use the server user session to set `user_id`.
 - Do not trust a `user_id` sent by the browser.
+- The role check is defense-in-depth alongside RLS — both must pass.
+
+**Add Zod validation** to match the existing style in `src/lib/validation/`. Create `src/lib/validation/notifications.ts`:
+
+```ts
+import { z } from 'zod';
+
+// Endpoint URLs from FCM/Mozilla autopush are ~150-300 chars in practice.
+// Cap generously at 2000 to prevent abusive payloads while leaving room.
+export const pushSubscriptionSchema = z.object({
+  endpoint: z
+    .string()
+    .url('Endpoint invalide')
+    .max(2000, 'Endpoint trop long'),
+  keys: z.object({
+    // p256dh is a base64url-encoded P-256 ECDH public key, always 87 chars.
+    p256dh: z
+      .string()
+      .min(80, 'Cle p256dh invalide')
+      .max(120, 'Cle p256dh invalide'),
+    // auth is a 16-byte secret, base64url-encoded to ~22 chars.
+    auth: z
+      .string()
+      .min(16, 'Cle auth invalide')
+      .max(40, 'Cle auth invalide'),
+  }),
+  device_label: z.string().max(120).nullable().optional(),
+});
+
+export const unsubscribeSchema = z.object({
+  endpoint: z.string().url('Endpoint invalide').max(2000),
+});
+
+export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;
+```
+
+Use it in the route:
+
+```ts
+const parsed = pushSubscriptionSchema.safeParse(await request.json());
+if (!parsed.success) {
+  return NextResponse.json(
+    { error: 'Donnees invalides', details: parsed.error.flatten() },
+    { status: 400 },
+  );
+}
+```
+
+Without bounds, the `endpoint` field is unbounded text and a malicious caller could insert multi-megabyte rows. The size limits above match real-world FCM/autopush key sizes with generous headroom.
 
 ### `src/app/api/notifications/unsubscribe/route.ts`
 
@@ -311,7 +447,7 @@ Behavior:
 
 ### `public/sw.js`
 
-Add push handling to the existing service worker.
+Add push handling to the existing service worker, and skip fetch caching on localhost so dev mode does not serve stale Next.js chunks.
 
 Current service worker already handles:
 
@@ -320,7 +456,31 @@ Current service worker already handles:
 - static asset caching
 - fetch for static assets
 
-Add:
+**Dev-mode caching guard:** add an early-return at the top of the existing `fetch` handler so localhost serves directly from the network. In Next dev, `/_next/static/` paths are content-hashed but rebuild on every edit, and a cached response will mask the dev server's updates and break HMR.
+
+Modify the existing `fetch` listener:
+
+```js
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // Skip all caching on localhost / dev — push handlers still work.
+  if (
+    self.location.hostname === 'localhost' ||
+    self.location.hostname === '127.0.0.1'
+  ) {
+    return;
+  }
+
+  // ...existing logic unchanged below
+});
+```
+
+Add push handling. **Wrap `event.data.json()` in try/catch** so a malformed payload still surfaces a visible notification — every `push` event must result in `showNotification`, otherwise iOS may revoke push permission after repeated silent failures, and Chrome may show "This site has been updated in the background" on the user's behalf.
 
 ```js
 self.addEventListener('push', (event) => {
@@ -332,7 +492,17 @@ self.addEventListener('push', (event) => {
     url: '/admin/dashboard',
   };
 
-  const payload = event.data ? event.data.json() : fallback;
+  let payload = fallback;
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch (err) {
+      // Malformed payload — fall through to fallback notification.
+      // Do NOT skip showNotification: a silent push event can cost the permission.
+      payload = fallback;
+    }
+  }
+
   const title = payload.title || fallback.title;
 
   event.waitUntil(
@@ -380,19 +550,23 @@ if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) {
 }
 ```
 
-Options:
+**Change for v1:** also register the service worker in development on localhost, so push can be tested end-to-end without a Vercel preview deploy.
 
-1. Keep this as-is for production-first testing on Vercel.
-2. Allow service worker registration on localhost for desktop development.
+Replace the guard with:
 
-Recommended v1:
+```ts
+if (!('serviceWorker' in navigator)) {
+  return;
+}
+```
 
-- Keep production behavior for minimal risk.
-- Add a small comment in the implementation PR explaining that local push testing requires service worker registration on localhost or a deployed preview URL.
+The service worker file (`/sw.js`) is already safe to load in dev — its caching logic only activates on real fetches, and the new `push` / `notificationclick` handlers are inert until a push arrives. Browsers also require HTTPS *or* localhost for service workers, so this does not weaken security in dev.
 
 ### `src/app/api/checkin/route.ts`
 
 Modify after successful attendance upsert and activity logging.
+
+**Runtime:** add an explicit `export const runtime = 'nodejs';` at the top of the file. The `web-push` package requires the Node.js runtime (it uses Node crypto and HTTP libraries that are not available on the Edge runtime). The route currently runs on Node by default, but pinning it explicitly prevents a future edit from accidentally flipping it to Edge and breaking push delivery silently.
 
 Current flow:
 
@@ -414,15 +588,24 @@ Needed changes:
 
 - Return the upserted attendance ID, or query it after upsert.
 - After `logActivity`, call `notifyStaffOfCheckIn(...)`.
-- Wrap notification send in `try/catch`.
+- `await` the notification send and use `Promise.allSettled` internally so one failing subscription does not abort the others.
+- Wrap the notification call in `try/catch`.
 - Log errors server-side, but do not fail the employee check-in if push sending fails.
+
+**Reliability over latency:** the check-in response waits for all push sends to complete (via `Promise.allSettled`) before returning. This adds latency proportional to the number of active staff subscriptions (typically ~200–800ms per subscription, parallelized), but guarantees:
+
+- Every subscription gets a delivery attempt before the request ends.
+- Expired subscriptions (404/410) are cleaned up synchronously, so the table stays healthy.
+- No reliance on Vercel keeping the function alive after the response is sent.
+
+If the team grows to a point where this latency becomes user-visible (>2s perceived delay on tap-to-confirm), revisit by moving sends to `unstable_after` (Next.js 15) or a Supabase Edge Function. For v1 staff sizes, this is fine.
 
 Recommended order:
 
 ```text
 1. Save attendance
 2. Log activity
-3. Fire notification best-effort
+3. Await notification send (Promise.allSettled, best-effort per subscription)
 4. Return success
 ```
 
@@ -431,6 +614,7 @@ Important:
 - Do not send notification before the database write succeeds.
 - Do not send on duplicate check-in rejection.
 - Do not send from manual attendance creation unless the product explicitly wants that later.
+- The outer `try/catch` ensures that even if the entire notification helper throws, the employee still gets a successful check-in response.
 
 ### `src/types/index.ts`
 
@@ -509,8 +693,8 @@ Responsibilities:
   - `serviceWorker` in `navigator`
   - `PushManager` in `window`
   - `Notification` in `window`
-- Wait for service worker registration.
-- Request permission only from button click.
+- Ensure service worker is registered (await `navigator.serviceWorker.ready` *before* the user-facing button is enabled, not inside the click handler — see iOS note below).
+- Request permission **synchronously inside the click handler**.
 - Convert VAPID public key from base64url to `Uint8Array`.
 - Call `registration.pushManager.subscribe(...)`.
 - POST subscription to `/api/notifications/subscribe`.
@@ -518,6 +702,54 @@ Responsibilities:
   - `registration.pushManager.getSubscription()`
   - POST endpoint to `/api/notifications/unsubscribe`
   - call `subscription.unsubscribe()`
+
+### Critical: iOS permission timing
+
+iOS Safari requires `Notification.requestPermission()` to be called **synchronously** from the user gesture (the click handler). If the click handler does any `await` *before* calling `requestPermission`, iOS treats the permission request as no-longer-user-initiated and silently rejects it without showing the prompt.
+
+**Wrong (will fail silently on iOS):**
+
+```ts
+async function onClick() {
+  const registration = await navigator.serviceWorker.ready; // breaks user-gesture chain
+  const permission = await Notification.requestPermission(); // iOS: silently denied
+  // ...
+}
+```
+
+**Right:**
+
+```ts
+// At component mount (outside any handler), pre-resolve registration:
+useEffect(() => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(setRegistration);
+  }
+}, []);
+
+async function onClick() {
+  // 1. Permission request FIRST, synchronously, no awaits before it:
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') return;
+
+  // 2. Now safe to await — registration was pre-resolved at mount:
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+  });
+
+  // 3. POST to server:
+  await fetch('/api/notifications/subscribe', { ... });
+}
+```
+
+Key rules:
+
+- Resolve `navigator.serviceWorker.ready` at component mount, store the registration in state.
+- The button must be disabled until that registration is ready.
+- The click handler's *first* awaited call must be `Notification.requestPermission()`.
+- All other awaits (subscribe, fetch) come after the permission grant.
+- This ordering also works correctly on Android and desktop, so no platform-specific branching is needed.
 
 VAPID conversion helper:
 
@@ -555,6 +787,22 @@ Formatting rules:
 - Fallback to `Africa/Tunis`, which the app already uses.
 - Keep the body short for lock screens.
 - Do not include sensitive GPS coordinates in notifications.
+
+### Deduplication via notification tag
+
+The `tag` field handles the rare case where the same arrival fires twice (e.g. employee taps Pointer twice while the first request is still in flight, or a network retry double-submits before the duplicate-rejection logic catches it).
+
+Tag format:
+
+```text
+attendance-checkin-<YYYY-MM-DD>-<employee_user_id>
+```
+
+Behavior: when the OS receives a second notification with the same tag, it **replaces** the existing one instead of stacking a duplicate. The manager sees one notification per employee per day, even if the push payload is somehow sent twice.
+
+**No daily rate limit on notifications.** Every legitimate arrival should always notify. A per-employee daily cap was considered and rejected because it would silently swallow real arrivals — bad for an attendance app. Tag-based dedup is sufficient for the duplicate-send edge case.
+
+If notification noise becomes a concern later (e.g. for a 50-person team), the right fix is per-recipient preferences (mute, late-only, digest mode), not a hard cap. See Phase 5.
 
 ## Security Notes
 
@@ -686,6 +934,7 @@ If iOS does not prompt:
 - Add a staff notification history table.
 - Add digest mode for high employee counts.
 - Add "Test notification" button for admins/managers.
+- Smarter `notificationclick` routing: instead of only refocusing tabs whose URL is an exact match for the target, refocus any same-origin admin tab and use `client.navigate(targetUrl)` to switch it. v1's exact-match behavior is correct, just slightly less polished — a manager with an open `/admin/dashboard` tab will get a second tab opened to `/admin/attendance` instead of having the existing tab navigate.
 
 ## Acceptance Criteria
 
