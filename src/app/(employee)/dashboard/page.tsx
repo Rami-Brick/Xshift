@@ -72,6 +72,7 @@ export default async function DashboardPage() {
         <TodayCard
           initialToday={todayRecord as Attendance | null}
           gracePeriodMinutes={settings?.grace_period_minutes ?? 10}
+          todayDate={today}
           isDayOff={isDayOff}
         />
       </div>

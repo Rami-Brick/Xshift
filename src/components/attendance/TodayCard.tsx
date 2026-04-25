@@ -29,16 +29,15 @@ const STATUS_TONE: Record<string, 'lime' | 'trendDown' | 'neutral'> = {
 interface TodayCardProps {
   initialToday: Attendance | null;
   gracePeriodMinutes: number;
+  todayDate: string;
   isDayOff?: boolean;
 }
 
-export function TodayCard({ initialToday, gracePeriodMinutes, isDayOff = false }: TodayCardProps) {
+export function TodayCard({ initialToday, gracePeriodMinutes, todayDate, isDayOff = false }: TodayCardProps) {
   const [today, setToday] = useState<Attendance | null>(initialToday);
 
   async function refresh() {
-    const res = await fetch(
-      `/api/attendance/me?start=${new Date().toISOString().slice(0, 10)}&end=${new Date().toISOString().slice(0, 10)}`,
-    );
+    const res = await fetch(`/api/attendance/me?start=${todayDate}&end=${todayDate}`);
     if (res.ok) {
       const data = await res.json();
       setToday(data[0] ?? null);

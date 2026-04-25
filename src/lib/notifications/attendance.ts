@@ -93,7 +93,7 @@ export async function notifyStaffOfCheckIn(args: NotifyArgs): Promise<void> {
     title: 'Nouveau pointage',
     body: `${args.employeeName} a pointé son arrivée à ${time}${lateSuffix}.`,
     icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    badge: '/icons/status-bar.png',
     tag: `attendance-checkin-${dateKey(args.checkInAt)}-${args.employeeId}`,
     url: '/admin/attendance',
     data: {
@@ -115,7 +115,10 @@ export async function notifyStaffOfCheckIn(args: NotifyArgs): Promise<void> {
 
   await Promise.allSettled(
     results.map(async (settled) => {
-      if (settled.status !== 'fulfilled') return;
+      if (settled.status !== 'fulfilled') {
+        console.error('[notifyStaffOfCheckIn] send rejected', settled.reason);
+        return;
+      }
       const { row, result } = settled.value;
 
       if (result.ok) {
@@ -134,6 +137,7 @@ export async function notifyStaffOfCheckIn(args: NotifyArgs): Promise<void> {
         return;
       }
 
+      console.error('[notifyStaffOfCheckIn] send failed', row.id, result.error);
       const nextCount = row.failure_count + 1;
       await service
         .from('push_subscriptions')
