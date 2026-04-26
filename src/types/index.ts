@@ -169,18 +169,126 @@ export interface ActivityLog {
   target?: Profile;
 }
 
+export type RosterStatus =
+  | 'present'
+  | 'late'
+  | 'not_yet'
+  | 'absent'
+  | 'on_leave'
+  | 'day_off';
+
+export interface RosterEntry {
+  user_id: string;
+  full_name: string;
+  status: RosterStatus;
+  check_in_at: string | null;
+  late_minutes: number;
+}
+
+export interface PendingLeaveItem {
+  id: string;
+  user_id: string;
+  full_name: string;
+  start_date: string;
+  end_date: string;
+  type: LeaveType;
+}
+
+export interface PendingDayOffItem {
+  id: string;
+  user_id: string;
+  full_name: string;
+  iso_year: number;
+  iso_week: number;
+  old_day: DayOfWeek;
+  new_day: DayOfWeek;
+}
+
 export interface AdminStats {
+  date: string;
+  is_today: boolean;
   total_active: number;
-  today: { present: number; late: number; absent: number; leave: number };
-  month: { present: number; late: number; absent: number };
-  pending_leave: number;
-  pending_day_off_changes: number;
+  roster: RosterEntry[];
+  pending_leave: PendingLeaveItem[];
+  pending_day_off_changes: PendingDayOffItem[];
   recent_activity: Array<{
     id: string;
     action: string;
     created_at: string;
     actor: { full_name: string } | null;
   }>;
+}
+
+export interface ReportsFilters {
+  start: string;
+  end: string;
+  user_id: string | null;
+  status: AttendanceStatus | null;
+  timezone: string;
+}
+
+export interface ReportsTotals {
+  employee_count: number;
+  expected_days: number;
+  present_count: number;
+  late_count: number;
+  absent_count: number;
+  leave_count: number;
+  holiday_count: number;
+  day_off_count: number;
+  forgot_checkout_count: number;
+  total_late_minutes: number;
+  avg_late_minutes: number;
+  attendance_rate: number;
+  punctuality_rate: number;
+  late_rate: number;
+}
+
+export interface ReportsDaySummary {
+  date: string;
+  present: number;
+  late: number;
+  absent: number;
+  leave: number;
+  holiday: number;
+  day_off: number;
+  forgot_checkout: number;
+  avg_late_minutes: number;
+}
+
+export interface ReportsEmployeeSummary {
+  user_id: string;
+  full_name: string;
+  expected_days: number;
+  present: number;
+  late: number;
+  absent: number;
+  leave: number;
+  holiday: number;
+  day_off: number;
+  forgot_checkout: number;
+  total_late_minutes: number;
+  avg_late_minutes: number;
+  attendance_rate: number;
+  punctuality_rate: number;
+  late_rate: number;
+  attention_score: number;
+}
+
+export interface ReportsAttentionItem {
+  user_id: string;
+  full_name: string;
+  reason: string;
+  severity: 'low' | 'medium' | 'high';
+  count: number;
+}
+
+export interface ReportsSummary {
+  filters: ReportsFilters;
+  totals: ReportsTotals;
+  by_day: ReportsDaySummary[];
+  by_employee: ReportsEmployeeSummary[];
+  needs_attention: ReportsAttentionItem[];
 }
 
 export interface DayOffChange {
