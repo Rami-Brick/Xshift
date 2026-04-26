@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
 
 interface Props {
   title: string;
@@ -9,8 +10,10 @@ interface Props {
   confirmLabel: string;
   loadingLabel?: string;
   loading?: boolean;
+  confirmationPhrase?: string;
+  confirmationLabel?: string;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (confirmationValue?: string) => void;
 }
 
 export function ConfirmActionDialog({
@@ -20,9 +23,15 @@ export function ConfirmActionDialog({
   confirmLabel,
   loadingLabel,
   loading = false,
+  confirmationPhrase,
+  confirmationLabel,
   onCancel,
   onConfirm,
 }: Props) {
+  const [confirmationValue, setConfirmationValue] = useState('');
+  const confirmationRequired = typeof confirmationPhrase === 'string' && confirmationPhrase.length > 0;
+  const canConfirm = !confirmationRequired || confirmationValue.trim() === confirmationPhrase;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
@@ -37,6 +46,21 @@ export function ConfirmActionDialog({
           </div>
         </div>
         <p className="text-sm text-muted">{description}</p>
+        {confirmationRequired && (
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-ink">
+              {confirmationLabel ?? 'Tapez la confirmation exacte'}
+            </span>
+            <input
+              type="text"
+              value={confirmationValue}
+              onChange={(event) => setConfirmationValue(event.target.value)}
+              disabled={loading}
+              className="w-full rounded-xl border border-soft bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-trend-down/25 disabled:opacity-60"
+              autoFocus
+            />
+          </label>
+        )}
         <div className="flex justify-end gap-3 pt-1">
           <button
             type="button"
@@ -48,8 +72,8 @@ export function ConfirmActionDialog({
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={loading}
+            onClick={() => onConfirm(confirmationValue)}
+            disabled={loading || !canConfirm}
             className="px-5 py-2 rounded-xl bg-trend-down text-white font-semibold text-sm hover:opacity-90 transition disabled:opacity-60"
           >
             {loading ? loadingLabel ?? confirmLabel : confirmLabel}

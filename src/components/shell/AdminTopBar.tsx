@@ -55,6 +55,7 @@ export function AdminTopBar({ fullName, role }: AdminTopBarProps) {
               {canAccessSettings(role) && (
                 <Link
                   href="/admin/settings"
+                  prefetch={false}
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition"
                 >
@@ -65,6 +66,7 @@ export function AdminTopBar({ fullName, role }: AdminTopBarProps) {
               {canAccessLogs(role) && (
                 <Link
                   href="/admin/logs"
+                  prefetch={false}
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-soft transition"
                 >

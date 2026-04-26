@@ -7,10 +7,18 @@ export interface BottomNavItemProps {
   label: string;
   href?: string;
   active?: boolean;
+  prefetch?: boolean;
   onClick?: () => void;
 }
 
-export function BottomNavItem({ icon: Icon, label, href, active, onClick }: BottomNavItemProps) {
+export function BottomNavItem({
+  icon: Icon,
+  label,
+  href,
+  active,
+  prefetch = false,
+  onClick,
+}: BottomNavItemProps) {
   const className = cn(
     'inline-flex h-11 w-11 items-center justify-center rounded-full transition',
     active ? 'bg-surface text-brand' : 'bg-navSlate text-white hover:bg-navSlateHover'
@@ -21,7 +29,7 @@ export function BottomNavItem({ icon: Icon, label, href, active, onClick }: Bott
     return (
       <Link
         href={href}
-        prefetch
+        prefetch={prefetch}
         aria-label={label}
         aria-current={active ? 'page' : undefined}
         className={className}

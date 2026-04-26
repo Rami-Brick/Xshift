@@ -90,7 +90,7 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
             <p className="text-sm text-muted mt-0.5 break-words">{p.email}</p>
           </div>
         </div>
-        <EmployeeDetailActions employee={p} viewerRole={viewer.role} />
+        <EmployeeDetailActions employee={p} viewerRole={viewer.role} viewerId={viewer.id} />
       </div>
 
       {/* Info grid */}

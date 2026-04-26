@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, UserX, KeyRound } from 'lucide-react';
+import { KeyRound, Pencil, Trash2, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { canEditEmployeeWorkData, canManageEmployeeAccounts } from '@/lib/auth/roles';
 import { EmployeeFormDialog } from './EmployeeFormDialog';
@@ -13,20 +13,28 @@ import type { Profile, Role } from '@/types';
 interface Props {
   employee: Profile;
   viewerRole: Role;
+  viewerId: string;
 }
 
-export function EmployeeDetailActions({ employee, viewerRole }: Props) {
+export function EmployeeDetailActions({ employee, viewerRole, viewerId }: Props) {
   const [showEdit, setShowEdit] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [deactivateLoading, setDeactivateLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const router = useRouter();
   const canEdit = canEditEmployeeWorkData(viewerRole);
   const canManageAccounts = canManageEmployeeAccounts(viewerRole);
+  const canManageThisAccount = canManageAccounts && employee.id !== viewerId;
 
   async function handleDeactivateConfirm() {
     setDeactivateLoading(true);
-    const res = await fetch(`/api/employees/${employee.id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/employees/${employee.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: false }),
+    });
     const json = await res.json();
     setDeactivateLoading(false);
     if (!res.ok) {
@@ -35,6 +43,24 @@ export function EmployeeDetailActions({ employee, viewerRole }: Props) {
     }
     toast.success('Employé désactivé');
     setConfirmDeactivate(false);
+    router.push('/admin/employees');
+  }
+
+  async function handleDeleteConfirm(confirmationValue?: string) {
+    setDeleteLoading(true);
+    const res = await fetch(`/api/employees/${employee.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmation: confirmationValue }),
+    });
+    const json = await res.json();
+    setDeleteLoading(false);
+    if (!res.ok) {
+      toast.error(json.error ?? 'Erreur lors de la suppression');
+      return;
+    }
+    toast.success('Employé supprimé');
+    setConfirmDelete(false);
     router.push('/admin/employees');
   }
 
@@ -68,7 +94,7 @@ export function EmployeeDetailActions({ employee, viewerRole }: Props) {
             Mot de passe
           </button>
         )}
-        {canManageAccounts && employee.is_active && (
+        {canManageThisAccount && employee.is_active && (
           <button
             type="button"
             onClick={() => setConfirmDeactivate(true)}
@@ -76,6 +102,16 @@ export function EmployeeDetailActions({ employee, viewerRole }: Props) {
           >
             <UserX size={14} />
             Désactiver
+          </button>
+        )}
+        {canManageThisAccount && (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition bg-trend-down text-white shadow-softer hover:opacity-90"
+          >
+            <Trash2 size={14} />
+            Supprimer
           </button>
         )}
       </div>
@@ -107,6 +143,21 @@ export function EmployeeDetailActions({ employee, viewerRole }: Props) {
           loading={deactivateLoading}
           onCancel={() => setConfirmDeactivate(false)}
           onConfirm={handleDeactivateConfirm}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmActionDialog
+          title="Supprimer définitivement cet employé ?"
+          detail={employee.full_name}
+          description="Cette suppression est définitive : le compte Auth, le profil, les présences, les congés, les jours de repos et les abonnements push de cet employé seront supprimés. Les journaux d'activité existants seront conservés sans lien vers ce profil."
+          confirmLabel="Supprimer"
+          loadingLabel="Suppression..."
+          loading={deleteLoading}
+          confirmationPhrase={employee.full_name}
+          confirmationLabel={`Tapez "${employee.full_name}" pour confirmer`}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={handleDeleteConfirm}
         />
       )}
     </>

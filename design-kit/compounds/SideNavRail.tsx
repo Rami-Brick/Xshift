@@ -10,6 +10,7 @@ export interface SideNavItemSpec<K extends string = string> {
   icon: LucideIcon;
   label: string;
   href?: string;
+  prefetch?: boolean;
 }
 
 export interface SideNavRailProps<K extends string = string> {
@@ -71,7 +72,7 @@ export function SideNavRail<K extends string = string>({
             <Link
               key={item.key}
               href={item.href}
-              prefetch
+              prefetch={item.prefetch ?? false}
               aria-label={item.label}
               aria-current={active ? 'page' : undefined}
               className={rowClass}
