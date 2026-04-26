@@ -169,12 +169,48 @@ export interface ActivityLog {
   target?: Profile;
 }
 
+export type RosterStatus =
+  | 'present'
+  | 'late'
+  | 'not_yet'
+  | 'absent'
+  | 'on_leave'
+  | 'day_off';
+
+export interface RosterEntry {
+  user_id: string;
+  full_name: string;
+  status: RosterStatus;
+  check_in_at: string | null;
+  late_minutes: number;
+}
+
+export interface PendingLeaveItem {
+  id: string;
+  user_id: string;
+  full_name: string;
+  start_date: string;
+  end_date: string;
+  type: LeaveType;
+}
+
+export interface PendingDayOffItem {
+  id: string;
+  user_id: string;
+  full_name: string;
+  iso_year: number;
+  iso_week: number;
+  old_day: DayOfWeek;
+  new_day: DayOfWeek;
+}
+
 export interface AdminStats {
+  date: string;
+  is_today: boolean;
   total_active: number;
-  today: { present: number; late: number; absent: number; leave: number };
-  month: { present: number; late: number; absent: number };
-  pending_leave: number;
-  pending_day_off_changes: number;
+  roster: RosterEntry[];
+  pending_leave: PendingLeaveItem[];
+  pending_day_off_changes: PendingDayOffItem[];
   recent_activity: Array<{
     id: string;
     action: string;
