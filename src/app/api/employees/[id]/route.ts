@@ -113,7 +113,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   return NextResponse.json(data);
 }
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { userId: actorId } = await requireAdmin();
   const { id } = await params;
 
@@ -126,8 +126,30 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
   const service = createServiceClient();
 
-  // Soft-delete: set is_active = false
-  const { error } = await service.from('profiles').update({ is_active: false }).eq('id', id);
+  const { data: target, error: targetError } = await service
+    .from('profiles')
+    .select(PROFILE_SELECT)
+    .eq('id', id)
+    .single();
+
+  if (targetError || !target) {
+    return NextResponse.json({ error: 'Employé introuvable' }, { status: 404 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body || body.confirmation !== target.full_name) {
+    return NextResponse.json(
+      { error: "Confirmation invalide. Tapez le nom complet de l'employé pour confirmer." },
+      { status: 422 },
+    );
+  }
+
+  const referenceCleanupError = await clearEmployeeReferences(service, id);
+  if (referenceCleanupError) {
+    return NextResponse.json({ error: referenceCleanupError.message }, { status: 500 });
+  }
+
+  const { error } = await service.auth.admin.deleteUser(id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -135,12 +157,35 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
   await logActivity({
     actorId,
-    action: 'deactivate_employee',
-    targetUserId: id,
-    details: { soft_delete: true },
+    action: 'delete_employee',
+    details: {
+      deleted_user_id: id,
+      full_name: target.full_name,
+      email: target.email,
+      role: target.role,
+    },
   });
 
   return NextResponse.json({ success: true });
+}
+
+async function clearEmployeeReferences(
+  service: ReturnType<typeof createServiceClient>,
+  employeeId: string,
+) {
+  const cleanups = await Promise.all([
+    service.from('attendance').update({ created_by: null }).eq('created_by', employeeId),
+    service.from('attendance').update({ updated_by: null }).eq('updated_by', employeeId),
+    service.from('leave_requests').update({ requested_by: null }).eq('requested_by', employeeId),
+    service.from('leave_requests').update({ reviewed_by: null }).eq('reviewed_by', employeeId),
+    service.from('day_off_changes').update({ requested_by: null }).eq('requested_by', employeeId),
+    service.from('day_off_changes').update({ reviewed_by: null }).eq('reviewed_by', employeeId),
+    service.from('office_settings').update({ updated_by: null }).eq('updated_by', employeeId),
+    service.from('activity_logs').update({ actor_id: null }).eq('actor_id', employeeId),
+    service.from('activity_logs').update({ target_user_id: null }).eq('target_user_id', employeeId),
+  ]);
+
+  return cleanups.find((result) => result.error)?.error ?? null;
 }
 
 function sanitizeEmployeeUpdates(actorRole: Role, updates: UpdateEmployeeInput): UpdateEmployeeInput | null {

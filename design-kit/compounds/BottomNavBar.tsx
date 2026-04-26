@@ -7,6 +7,7 @@ export interface BottomNavItemSpec<K extends string = string> {
   icon: LucideIcon;
   label: string;
   href?: string;
+  prefetch?: boolean;
 }
 
 export interface BottomNavBarProps<K extends string = string> {
@@ -40,6 +41,7 @@ export function BottomNavBar<K extends string = string>({
           label={item.label}
           href={item.href}
           active={item.key === activeKey}
+          prefetch={item.prefetch}
           onClick={() => onChange?.(item.key)}
         />
       ))}

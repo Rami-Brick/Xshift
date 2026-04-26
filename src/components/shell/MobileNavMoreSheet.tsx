@@ -53,7 +53,7 @@ export function MobileNavMoreSheet({ role, open, onClose }: MobileNavMoreSheetPr
             <Link
               key={href}
               href={href}
-              prefetch
+              prefetch={false}
               onClick={onClose}
               aria-current={active ? 'page' : undefined}
               className={cn(

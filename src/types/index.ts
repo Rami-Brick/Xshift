@@ -23,6 +23,7 @@ export type ActivityAction =
   | 'create_employee'
   | 'update_employee'
   | 'deactivate_employee'
+  | 'delete_employee'
   | 'update_attendance'
   | 'manual_attendance'
   | 'delete_attendance'

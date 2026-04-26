@@ -15,6 +15,7 @@ const ACTION_LABEL: Record<string, string> = {
   create_employee: 'Employé créé',
   update_employee: 'Employé mis à jour',
   deactivate_employee: 'Employé désactivé',
+  delete_employee: 'Employé supprimé',
   update_attendance: 'Présence modifiée',
   manual_attendance: 'Présence manuelle',
   delete_attendance: 'Présence supprimée',
