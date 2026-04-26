@@ -1,91 +1,152 @@
 'use client';
 
-import { useState } from 'react';
-import { Download } from 'lucide-react';
-import { formatInTimeZone } from 'date-fns-tz';
-import { startOfMonth, endOfMonth } from 'date-fns';
-import type { Profile } from '@/types';
+import dynamic from 'next/dynamic';
+import { useMemo, useState } from 'react';
+import useSWR from 'swr';
+import { BarChart3 } from 'lucide-react';
+import { ReportsFilters, type ReportsFilterState } from './reports/ReportsFilters';
+import { ReportsKpiGrid } from './reports/ReportsKpiGrid';
+import { EmployeeReportTable } from './reports/EmployeeReportTable';
+import { NeedsAttentionPanel } from './reports/NeedsAttentionPanel';
+import type { AttendanceStatus, Profile, ReportsSummary } from '@/types';
 
-const OFFICE_TZ = 'Africa/Tunis';
+const AttendanceTrendChart = dynamic(() => import('./reports/AttendanceTrendChart'), {
+  ssr: false,
+  loading: () => <ChartPlaceholder title="Evolution des presences" />,
+});
+
+const LateMinutesChart = dynamic(() => import('./reports/LateMinutesChart'), {
+  ssr: false,
+  loading: () => <ChartPlaceholder title="Retards moyens" />,
+});
+
+const StatusBreakdownChart = dynamic(() => import('./reports/StatusBreakdownChart'), {
+  ssr: false,
+  loading: () => <ChartPlaceholder title="Repartition" />,
+});
 
 interface Props {
   employees: Pick<Profile, 'id' | 'full_name'>[];
+  initialSummary: ReportsSummary;
 }
 
-export function ReportsClient({ employees }: Props) {
-  const now = new Date();
-  const [userId, setUserId] = useState('');
-  const [status, setStatus] = useState('');
-  const [start, setStart] = useState(formatInTimeZone(startOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd'));
-  const [end, setEnd] = useState(formatInTimeZone(endOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd'));
+const fetcher = async (url: string): Promise<ReportsSummary> => {
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error ?? 'Erreur lors du chargement des rapports');
+  }
+  return json;
+};
 
-  function buildUrl() {
-    const params = new URLSearchParams({ start, end });
-    if (userId) params.set('user_id', userId);
-    if (status) params.set('status', status);
+export function ReportsClient({ employees, initialSummary }: Props) {
+  const initialFilters = useMemo<ReportsFilterState>(
+    () => ({
+      start: initialSummary.filters.start,
+      end: initialSummary.filters.end,
+      user_id: initialSummary.filters.user_id ?? '',
+      status: initialSummary.filters.status ?? '',
+    }),
+    [initialSummary],
+  );
+
+  const [filters, setFilters] = useState<ReportsFilterState>(initialFilters);
+
+  const query = useMemo(() => {
+    const params = new URLSearchParams({
+      start: filters.start,
+      end: filters.end,
+    });
+    if (filters.user_id) params.set('user_id', filters.user_id);
+    if (filters.status) params.set('status', filters.status);
+    return params.toString();
+  }, [filters]);
+
+  const { data, error, isValidating } = useSWR<ReportsSummary>(
+    `/api/reports/summary?${query}`,
+    fetcher,
+    {
+      fallbackData: query === queryForSummary(initialSummary) ? initialSummary : undefined,
+      keepPreviousData: true,
+    },
+  );
+
+  const summary = data ?? initialSummary;
+
+  const exportUrl = useMemo(() => {
+    const params = new URLSearchParams({
+      start: filters.start,
+      end: filters.end,
+    });
+    if (filters.user_id) params.set('user_id', filters.user_id);
+    if (filters.status) params.set('status', filters.status);
     return `/api/reports/attendance.csv?${params.toString()}`;
+  }, [filters]);
+
+  function resetFilters() {
+    setFilters(initialFilters);
+  }
+
+  function updateFilters(next: Partial<ReportsFilterState>) {
+    setFilters((current) => ({ ...current, ...next }));
   }
 
   return (
-    <div className="bg-surface rounded-xl p-6 shadow-softer space-y-5 max-w-lg">
-      <p className="text-sm font-semibold text-muted uppercase tracking-wide">Export CSV — Présences</p>
+    <div className="space-y-5">
+      <ReportsFilters
+        filters={filters}
+        employees={employees}
+        exportUrl={exportUrl}
+        loading={isValidating}
+        onChange={updateFilters}
+        onReset={resetFilters}
+      />
 
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-caption font-medium text-muted">Du</label>
-            <input
-              type="date"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-              className={inputCls}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-caption font-medium text-muted">Au</label>
-            <input
-              type="date"
-              value={end}
-              onChange={(e) => setEnd(e.target.value)}
-              className={inputCls}
-            />
-          </div>
+      {error && (
+        <div className="rounded-xl border border-trend-down/20 bg-red-50 px-4 py-3 text-sm font-medium text-trend-down">
+          {error.message}
         </div>
+      )}
 
-        <div className="space-y-1">
-          <label className="text-caption font-medium text-muted">Employé</label>
-          <select value={userId} onChange={(e) => setUserId(e.target.value)} className={inputCls}>
-            <option value="">Tous</option>
-            {employees.map((e) => (
-              <option key={e.id} value={e.id}>{e.full_name}</option>
-            ))}
-          </select>
-        </div>
+      <ReportsKpiGrid summary={summary} />
 
-        <div className="space-y-1">
-          <label className="text-caption font-medium text-muted">Statut</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-            <option value="">Tous</option>
-            <option value="present">Présent</option>
-            <option value="late">En retard</option>
-            <option value="absent">Absent</option>
-            <option value="leave">En congé</option>
-            <option value="holiday">Jour férié</option>
-          </select>
-        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.8fr)] gap-4">
+        <AttendanceTrendChart data={summary.by_day} />
+        <StatusBreakdownChart totals={summary.totals} />
       </div>
 
-      <a
-        href={buildUrl()}
-        download
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand text-white font-semibold text-sm hover:opacity-90 transition"
-      >
-        <Download size={16} />
-        Télécharger CSV
-      </a>
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)] gap-4">
+        <LateMinutesChart data={summary.by_day} />
+        <NeedsAttentionPanel items={summary.needs_attention} />
+      </div>
+
+      <EmployeeReportTable rows={summary.by_employee} statusFilter={filters.status} />
     </div>
   );
 }
 
-const inputCls =
-  'w-full rounded-xl bg-canvas border border-soft px-3 py-2 text-sm text-ink placeholder:text-muted outline-none focus:border-brand transition';
+function queryForSummary(summary: ReportsSummary): string {
+  const params = new URLSearchParams({
+    start: summary.filters.start,
+    end: summary.filters.end,
+  });
+  if (summary.filters.user_id) params.set('user_id', summary.filters.user_id);
+  if (summary.filters.status) params.set('status', summary.filters.status);
+  return params.toString();
+}
+
+function ChartPlaceholder({ title }: { title: string }) {
+  return (
+    <div className="bg-surface rounded-xl shadow-softer p-5 min-h-[280px]">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-soft">
+          <BarChart3 size={16} className="text-muted" />
+        </span>
+        <p className="text-sm font-semibold text-ink">{title}</p>
+      </div>
+      <div className="mt-5 h-44 rounded-xl bg-soft animate-pulse" />
+    </div>
+  );
+}
+
+export type ReportStatusOption = AttendanceStatus | '';

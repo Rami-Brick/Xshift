@@ -219,6 +219,78 @@ export interface AdminStats {
   }>;
 }
 
+export interface ReportsFilters {
+  start: string;
+  end: string;
+  user_id: string | null;
+  status: AttendanceStatus | null;
+  timezone: string;
+}
+
+export interface ReportsTotals {
+  employee_count: number;
+  expected_days: number;
+  present_count: number;
+  late_count: number;
+  absent_count: number;
+  leave_count: number;
+  holiday_count: number;
+  day_off_count: number;
+  forgot_checkout_count: number;
+  total_late_minutes: number;
+  avg_late_minutes: number;
+  attendance_rate: number;
+  punctuality_rate: number;
+  late_rate: number;
+}
+
+export interface ReportsDaySummary {
+  date: string;
+  present: number;
+  late: number;
+  absent: number;
+  leave: number;
+  holiday: number;
+  day_off: number;
+  forgot_checkout: number;
+  avg_late_minutes: number;
+}
+
+export interface ReportsEmployeeSummary {
+  user_id: string;
+  full_name: string;
+  expected_days: number;
+  present: number;
+  late: number;
+  absent: number;
+  leave: number;
+  holiday: number;
+  day_off: number;
+  forgot_checkout: number;
+  total_late_minutes: number;
+  avg_late_minutes: number;
+  attendance_rate: number;
+  punctuality_rate: number;
+  late_rate: number;
+  attention_score: number;
+}
+
+export interface ReportsAttentionItem {
+  user_id: string;
+  full_name: string;
+  reason: string;
+  severity: 'low' | 'medium' | 'high';
+  count: number;
+}
+
+export interface ReportsSummary {
+  filters: ReportsFilters;
+  totals: ReportsTotals;
+  by_day: ReportsDaySummary[];
+  by_employee: ReportsEmployeeSummary[];
+  needs_attention: ReportsAttentionItem[];
+}
+
 export interface DayOffChange {
   id: string;
   user_id: string;

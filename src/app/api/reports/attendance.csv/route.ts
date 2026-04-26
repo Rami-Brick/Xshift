@@ -4,6 +4,7 @@ import { requireStaff } from '@/lib/auth/guards';
 import { formatInTimeZone } from 'date-fns-tz';
 
 const OFFICE_TZ = 'Africa/Tunis';
+const STATUS_VALUES = new Set(['present', 'late', 'absent', 'leave', 'holiday', 'day_off']);
 
 function escapeCSV(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return '';
@@ -31,6 +32,10 @@ export async function GET(request: NextRequest) {
     .limit(5000);
 
   if (userId) query = query.eq('user_id', userId);
+  if (status && !STATUS_VALUES.has(status)) {
+    return NextResponse.json({ error: 'Statut invalide' }, { status: 422 });
+  }
+
   if (status) query = query.eq('status', status as never);
   if (start) query = query.gte('date', start);
   if (end) query = query.lte('date', end);
