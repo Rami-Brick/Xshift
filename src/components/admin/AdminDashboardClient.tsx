@@ -305,7 +305,6 @@ function RosterTile({
   isToday: boolean;
 }) {
   const meta = STATUS_META[entry.status];
-  const detail = rosterDetail(entry, isToday);
 
   return (
     <Link
@@ -317,9 +316,7 @@ function RosterTile({
       <p className="mt-2 text-sm font-semibold text-ink truncate w-full leading-tight">
         {entry.full_name}
       </p>
-      <p className="text-caption text-muted truncate w-full leading-tight mt-0.5">
-        {detail}
-      </p>
+      <RosterDetail entry={entry} isToday={isToday} />
       <span
         className={`mt-2 inline-flex items-center rounded-pill px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none h-5 ${meta.pillBg} ${meta.pillText}`}
       >
@@ -352,6 +349,50 @@ const MEDAL_STYLES: Record<number, { color: string; fill: string; shadow: string
   2: { color: '#7A8089', fill: '#D8DCE2', shadow: 'rgba(120, 125, 135, 0.45)' },
   3: { color: '#834E14', fill: '#D89561', shadow: 'rgba(140, 80, 30, 0.5)' },
 };
+
+function RosterDetail({ entry, isToday }: { entry: RosterEntry; isToday: boolean }) {
+  if (entry.status === 'present' || entry.status === 'late') {
+    const time = entry.check_in_at ? formatTime(entry.check_in_at) : null;
+    const minuteMeta = rosterMinuteMeta(entry);
+
+    return (
+      <p className="text-caption truncate w-full leading-tight mt-0.5">
+        {time && <span className="text-muted">{time}</span>}
+        {time && minuteMeta && <span className="text-muted"> · </span>}
+        {minuteMeta && <span className={minuteMeta.className}>{minuteMeta.label}</span>}
+        {!time && !minuteMeta && <span className="text-muted">À l’heure</span>}
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-caption text-muted truncate w-full leading-tight mt-0.5">
+      {rosterDetail(entry, isToday)}
+    </p>
+  );
+}
+
+function rosterMinuteMeta(entry: RosterEntry): { label: string; className: string } | null {
+  const minutes = entry.late_minutes ?? 0;
+
+  if (entry.status === 'late') {
+    return { label: formatMinuteDelta(minutes), className: 'text-trend-down' };
+  }
+
+  if (minutes < 0) {
+    return { label: formatMinuteDelta(minutes), className: 'text-trend-up' };
+  }
+
+  if (minutes > 0) {
+    return { label: formatMinuteDelta(minutes), className: 'text-muted' };
+  }
+
+  return null;
+}
+
+function formatMinuteDelta(minutes: number): string {
+  return `${minutes > 0 ? '+' : ''}${minutes} min`;
+}
 
 function rosterDetail(entry: RosterEntry, isToday: boolean): string {
   switch (entry.status) {
