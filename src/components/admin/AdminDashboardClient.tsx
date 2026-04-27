@@ -31,35 +31,6 @@ import type {
 
 const OFFICE_TZ = 'Africa/Tunis';
 
-const ACTION_LABEL: Record<string, string> = {
-  checkin: 'Arrivée pointée',
-  checkout: 'Départ pointé',
-  create_employee: 'Employé créé',
-  update_employee: 'Employé mis à jour',
-  deactivate_employee: 'Employé désactivé',
-  delete_employee: 'Employé supprimé',
-  update_attendance: 'Présence modifiée',
-  manual_attendance: 'Présence manuelle',
-  delete_attendance: 'Présence supprimée',
-  request_leave: 'Congé demandé',
-  approve_leave: 'Congé approuvé',
-  reject_leave: 'Congé refusé',
-  cancel_leave: 'Congé annulé',
-  assign_leave: 'Congé assigné',
-  update_leave: 'Congé modifié',
-  delete_leave: 'Congé supprimé',
-  update_settings: 'Paramètres mis à jour',
-  login: 'Connexion',
-  request_day_off_change: 'Changement de repos demandé',
-  approve_day_off_change: 'Changement de repos approuvé',
-  reject_day_off_change: 'Changement de repos refusé',
-  cancel_day_off_change: 'Changement de repos annulé',
-  assign_day_off_change: 'Changement de repos assigné',
-  update_day_off_change: 'Changement de repos modifié',
-  delete_day_off_change: 'Changement de repos supprimé',
-  update_default_day_off: 'Jour de repos par défaut modifié',
-};
-
 const LEAVE_TYPE_LABEL: Record<string, string> = {
   annual: 'Annuel',
   sick: 'Maladie',
@@ -73,9 +44,9 @@ const STATUS_META: Record<
 > = {
   present: { label: 'À l’heure', pillBg: 'bg-[#7FD3A8]', pillText: 'text-[#053D1B]' },
   late: { label: 'En retard', pillBg: 'bg-[#FFC966]', pillText: 'text-[#3D2600]' },
-  not_yet: { label: 'Pas encore', pillBg: 'bg-soft', pillText: 'text-muted' },
+  not_yet: { label: 'Pas encore', pillBg: 'bg-canvas border border-soft', pillText: 'text-ink' },
   on_leave: { label: 'En congé', pillBg: 'bg-[#88AAF0]', pillText: 'text-[#0A2660]' },
-  day_off: { label: 'Repos', pillBg: 'bg-soft', pillText: 'text-muted' },
+  day_off: { label: 'Repos', pillBg: 'bg-canvas border border-soft', pillText: 'text-ink' },
   absent: { label: 'Absent', pillBg: 'bg-[#EE8585]', pillText: 'text-[#4D0808]' },
 };
 
@@ -126,7 +97,7 @@ export function AdminDashboardClient({ initialStats }: { initialStats: AdminStat
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-ink tracking-tight">Tableau de bord</h1>
           <SummaryChips
@@ -139,32 +110,34 @@ export function AdminDashboardClient({ initialStats }: { initialStats: AdminStat
           />
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => shiftDay(-1)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface shadow-softer text-ink hover:bg-soft"
-            aria-label="Jour précédent"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <div className="px-3 h-9 inline-flex items-center rounded-full bg-surface shadow-softer text-sm font-semibold text-ink capitalize min-w-[140px] justify-center">
-            {dateLabel}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="inline-flex items-center h-9 rounded-pill bg-surface shadow-softer overflow-hidden">
+            <button
+              type="button"
+              onClick={() => shiftDay(-1)}
+              aria-label="Jour précédent"
+              className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-soft"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="px-3 h-9 inline-flex items-center justify-center border-x border-soft text-sm font-semibold text-ink capitalize min-w-[140px] text-center">
+              {dateLabel}
+            </div>
+            <button
+              type="button"
+              onClick={() => shiftDay(1)}
+              disabled={currentStats.date >= todayDate}
+              aria-label="Jour suivant"
+              className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-soft disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => shiftDay(1)}
-            disabled={currentStats.date >= todayDate}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface shadow-softer text-ink hover:bg-soft disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Jour suivant"
-          >
-            <ChevronRight size={18} />
-          </button>
           {!isToday && (
             <button
               type="button"
               onClick={() => setDate(todayDate)}
-              className="ml-1 px-3 h-9 rounded-full bg-ink text-white text-sm font-semibold hover:bg-navSlate"
+              className="px-3 h-9 rounded-pill bg-ink text-white text-sm font-semibold hover:bg-navSlate"
             >
               Aujourd&apos;hui
             </button>
@@ -178,9 +151,9 @@ export function AdminDashboardClient({ initialStats }: { initialStats: AdminStat
           <p className="text-sm text-muted">Aucun employé actif</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-[1100px]">
           {ordered.map(({ entry, rank }) => (
-            <RosterTile key={entry.user_id} entry={entry} rank={rank} isToday={isToday} />
+            <RosterTile key={entry.user_id} entry={entry} rank={rank} />
           ))}
         </div>
       )}
@@ -203,34 +176,6 @@ export function AdminDashboardClient({ initialStats }: { initialStats: AdminStat
         </div>
       )}
 
-      {/* Recent activity */}
-      {currentStats.recent_activity.length > 0 && (
-        <div>
-          <p className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">
-            Activité récente
-          </p>
-          <div className="bg-surface rounded-xl shadow-softer overflow-hidden">
-            {currentStats.recent_activity.map((log) => (
-              <div
-                key={log.id}
-                className="flex items-center justify-between px-4 py-3 border-b border-soft last:border-0"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink truncate">
-                    {ACTION_LABEL[log.action] ?? log.action}
-                  </p>
-                  <p className="text-caption text-muted truncate">
-                    {log.actor?.full_name ?? '—'}
-                  </p>
-                </div>
-                <p className="text-caption text-muted whitespace-nowrap ml-3">
-                  {formatInTimeZone(new Date(log.created_at), OFFICE_TZ, 'HH:mm')}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -251,7 +196,7 @@ function SummaryChips({
   dayOff: number;
 }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
       <Chip
         icon={CheckCircle2}
         label={`${arrivedTotal}/${expected}`}
@@ -268,7 +213,7 @@ function SummaryChips({
         <Chip icon={Plane} label={String(onLeave)} bg="bg-[#88AAF0]" fg="text-[#0A2660]" />
       )}
       {dayOff > 0 && (
-        <Chip icon={Coffee} label={String(dayOff)} bg="bg-soft" fg="text-muted" />
+        <Chip icon={Coffee} label={String(dayOff)} bg="bg-canvas border border-soft" fg="text-ink" />
       )}
     </div>
   );
@@ -298,25 +243,23 @@ function Chip({
 function RosterTile({
   entry,
   rank,
-  isToday,
 }: {
   entry: RosterEntry;
   rank: number | null;
-  isToday: boolean;
 }) {
   const meta = STATUS_META[entry.status];
 
   return (
     <Link
       href={`/admin/employees/${entry.user_id}`}
-      className="group relative bg-surface rounded-xl shadow-softer p-3 flex flex-col items-center text-center transition hover:shadow-soft hover:-translate-y-0.5"
+      className="group relative bg-surface rounded-xl border border-soft shadow-softer p-4 flex flex-col items-center text-center transition hover:shadow-soft hover:-translate-y-0.5 hover:border-transparent"
     >
       {rank !== null && rank <= 3 && <RankMedal rank={rank} />}
-      <InitialAvatar name={entry.full_name} size={56} tone="gradient" />
+      <InitialAvatar name={entry.full_name} size={64} tone="gradient" />
       <p className="mt-2 text-sm font-semibold text-ink truncate w-full leading-tight">
         {entry.full_name}
       </p>
-      <RosterDetail entry={entry} isToday={isToday} />
+      <RosterDetail entry={entry} />
       <span
         className={`mt-2 inline-flex items-center rounded-pill px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none h-5 ${meta.pillBg} ${meta.pillText}`}
       >
@@ -350,24 +293,20 @@ const MEDAL_STYLES: Record<number, { color: string; fill: string; shadow: string
   3: { color: '#834E14', fill: '#D89561', shadow: 'rgba(140, 80, 30, 0.5)' },
 };
 
-function RosterDetail({ entry, isToday }: { entry: RosterEntry; isToday: boolean }) {
-  if (entry.status === 'present' || entry.status === 'late') {
-    const time = entry.check_in_at ? formatTime(entry.check_in_at) : null;
-    const minuteMeta = rosterMinuteMeta(entry);
-
-    return (
-      <p className="text-caption truncate w-full leading-tight mt-0.5">
-        {time && <span className="text-muted">{time}</span>}
-        {time && minuteMeta && <span className="text-muted"> · </span>}
-        {minuteMeta && <span className={minuteMeta.className}>{minuteMeta.label}</span>}
-        {!time && !minuteMeta && <span className="text-muted">À l’heure</span>}
-      </p>
-    );
+function RosterDetail({ entry }: { entry: RosterEntry }) {
+  if (entry.status !== 'present' && entry.status !== 'late') {
+    return null;
   }
 
+  const time = entry.check_in_at ? formatTime(entry.check_in_at) : null;
+  const minuteMeta = rosterMinuteMeta(entry);
+
   return (
-    <p className="text-caption text-muted truncate w-full leading-tight mt-0.5">
-      {rosterDetail(entry, isToday)}
+    <p className="text-caption truncate w-full leading-tight mt-0.5">
+      {time && <span className="text-muted">{time}</span>}
+      {time && minuteMeta && <span className="text-muted"> · </span>}
+      {minuteMeta && <span className={minuteMeta.className}>{minuteMeta.label}</span>}
+      {!time && !minuteMeta && <span className="text-muted">À l’heure</span>}
     </p>
   );
 }
@@ -392,25 +331,6 @@ function rosterMinuteMeta(entry: RosterEntry): { label: string; className: strin
 
 function formatMinuteDelta(minutes: number): string {
   return `${minutes > 0 ? '+' : ''}${minutes} min`;
-}
-
-function rosterDetail(entry: RosterEntry, isToday: boolean): string {
-  switch (entry.status) {
-    case 'present':
-      return entry.check_in_at ? formatTime(entry.check_in_at) : 'À l’heure';
-    case 'late':
-      return entry.check_in_at
-        ? `${formatTime(entry.check_in_at)} · +${entry.late_minutes} min`
-        : `+${entry.late_minutes} min`;
-    case 'not_yet':
-      return isToday ? 'Pas encore arrivé' : 'Aucun pointage';
-    case 'absent':
-      return 'Aucun pointage';
-    case 'on_leave':
-      return 'En congé';
-    case 'day_off':
-      return 'Jour de repos';
-  }
 }
 
 function formatTime(ts: string): string {
