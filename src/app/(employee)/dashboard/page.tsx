@@ -20,7 +20,7 @@ export default async function DashboardPage() {
   const today = todayDateInOffice();
   const now = new Date();
 
-  const [{ data: todayRecord }, { data: settings }] = await timeAsync(
+  const [{ data: todayRecord }, { data: settings }, { data: unresolvedPriorDays }] = await timeAsync(
     'page.employee.dashboard.data',
     () => Promise.all([
       supabase
@@ -33,6 +33,15 @@ export default async function DashboardPage() {
         .from('office_settings')
         .select('grace_period_minutes')
         .single(),
+      supabase
+        .from('attendance')
+        .select('date')
+        .eq('user_id', profile.id)
+        .lt('date', today)
+        .not('check_in_at', 'is', null)
+        .is('check_out_at', null)
+        .order('date', { ascending: false })
+        .limit(5),
     ]),
   );
 
@@ -56,9 +65,11 @@ export default async function DashboardPage() {
   );
   const isDayOff = effective === dayOfWeekEnum(now);
 
+  const hasUnresolved = (unresolvedPriorDays?.length ?? 0) > 0;
+
   return (
-    <div className="px-4 pt-7 pb-2">
-      <div className="min-h-[150px] flex flex-col items-center justify-center text-center">
+    <div className="px-4 pt-3 pb-2">
+      <div className="min-h-[120px] flex flex-col items-center justify-center text-center">
         <p className="text-small font-semibold text-brand">Bonjour</p>
         <h1 className="mt-2 text-displayXl font-bold text-ink leading-none">
           {firstName}
@@ -68,12 +79,14 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="mt-4">
+      <div className={hasUnresolved ? 'mt-28' : 'mt-4'}>
         <TodayCard
           initialToday={todayRecord as Attendance | null}
           gracePeriodMinutes={settings?.grace_period_minutes ?? 10}
           todayDate={today}
           isDayOff={isDayOff}
+          initialUnresolvedPriorDays={unresolvedPriorDays ?? []}
+          firstName={firstName}
         />
       </div>
     </div>

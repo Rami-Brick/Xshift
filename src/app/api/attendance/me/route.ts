@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { todayDateInOffice } from '@/lib/utils/date';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const start = searchParams.get('start');
   const end = searchParams.get('end');
+  const includeUnresolved = searchParams.get('include_unresolved') === '1';
 
   let query = supabase
     .from('attendance')
@@ -26,6 +28,24 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (includeUnresolved) {
+    const { data: unresolved, error: unresolvedError } = await supabase
+      .from('attendance')
+      .select('date')
+      .eq('user_id', user.id)
+      .lt('date', todayDateInOffice())
+      .not('check_in_at', 'is', null)
+      .is('check_out_at', null)
+      .order('date', { ascending: false })
+      .limit(5);
+
+    if (unresolvedError) {
+      return NextResponse.json({ error: unresolvedError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ records: data, unresolvedPriorDays: unresolved ?? [] });
   }
 
   return NextResponse.json(data);

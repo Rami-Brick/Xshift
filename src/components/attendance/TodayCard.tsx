@@ -2,11 +2,19 @@
 
 import { useState } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
+import { formatInTimeZone } from 'date-fns-tz';
+import { fr } from 'date-fns/locale';
 import { Card } from '@/design-kit/primitives/Card';
 import { Chip } from '@/design-kit/primitives/Chip';
 import { CheckInButton } from './CheckInButton';
 import { formatTime } from '@/lib/attendance/status';
 import type { Attendance } from '@/types';
+
+type UnresolvedPriorDay = { date: string };
+
+function formatPriorDay(date: string): string {
+  return formatInTimeZone(`${date}T00:00:00`, 'Africa/Tunis', 'EEEE d MMMM', { locale: fr });
+}
 
 const STATUS_LABEL: Record<string, string> = {
   present: 'Présent',
@@ -31,21 +39,62 @@ interface TodayCardProps {
   gracePeriodMinutes: number;
   todayDate: string;
   isDayOff?: boolean;
+  initialUnresolvedPriorDays?: UnresolvedPriorDay[];
+  firstName: string;
 }
 
-export function TodayCard({ initialToday, gracePeriodMinutes, todayDate, isDayOff = false }: TodayCardProps) {
+export function TodayCard({
+  initialToday,
+  gracePeriodMinutes,
+  todayDate,
+  isDayOff = false,
+  initialUnresolvedPriorDays = [],
+  firstName,
+}: TodayCardProps) {
   const [today, setToday] = useState<Attendance | null>(initialToday);
+  const [unresolvedPriorDays, setUnresolvedPriorDays] =
+    useState<UnresolvedPriorDay[]>(initialUnresolvedPriorDays);
 
   async function refresh() {
-    const res = await fetch(`/api/attendance/me?start=${todayDate}&end=${todayDate}`);
+    const res = await fetch(
+      `/api/attendance/me?start=${todayDate}&end=${todayDate}&include_unresolved=1`,
+    );
     if (res.ok) {
-      const data = await res.json();
-      setToday(data[0] ?? null);
+      const data = (await res.json()) as {
+        records: Attendance[];
+        unresolvedPriorDays: UnresolvedPriorDay[];
+      };
+      setToday(data.records[0] ?? null);
+      setUnresolvedPriorDays(data.unresolvedPriorDays ?? []);
     }
   }
 
   return (
-    <Card tone="surface" className="p-5 pb-6">
+    <div className="relative">
+      {unresolvedPriorDays.length > 0 && (
+        <div
+          role="alert"
+          title={unresolvedPriorDays.map((d) => formatPriorDay(d.date)).join(', ')}
+          className="absolute left-0 right-0 bottom-full -mb-2 z-10 overflow-hidden rounded-2xl border-2 border-red-700 bg-gradient-to-br from-red-500 to-red-700 px-4 py-3 text-center text-white shadow-[0_10px_30px_rgba(220,38,38,0.45)] animate-[pulse_1.8s_ease-in-out_infinite]"
+        >
+          <div className="flex items-center justify-center gap-2">
+            <AlertTriangle
+              size={22}
+              className="text-white animate-[pulse_1.2s_ease-in-out_infinite]"
+            />
+            <p className="text-cardTitle font-extrabold uppercase tracking-wide text-white">
+              Attention {firstName} !
+            </p>
+          </div>
+          <p className="mt-1 text-small font-semibold text-white/95">
+            {unresolvedPriorDays.length === 1
+              ? `Vous avez oublié de pointer votre départ — ${formatPriorDay(unresolvedPriorDays[0].date)}`
+              : `Vous avez oublié de pointer votre départ — ${unresolvedPriorDays.length} jours non clôturés`}
+          </p>
+        </div>
+      )}
+
+      <Card tone="surface" className="p-5 pb-6">
       <div className="flex min-h-7 items-center justify-center gap-2">
         {today?.status ? (
           <Chip variant={STATUS_TONE[today.status] ?? 'neutral'}>
@@ -53,12 +102,6 @@ export function TodayCard({ initialToday, gracePeriodMinutes, todayDate, isDayOf
           </Chip>
         ) : (
           <span className="sr-only">Pointage du jour</span>
-        )}
-        {today?.forgot_checkout && (
-          <span className="flex items-center gap-1 text-small text-trend-down font-medium">
-            <AlertTriangle size={14} />
-            Oubli de départ
-          </span>
         )}
       </div>
 
@@ -112,5 +155,6 @@ export function TodayCard({ initialToday, gracePeriodMinutes, todayDate, isDayOf
         </div>
       </div>
     </Card>
+    </div>
   );
 }
