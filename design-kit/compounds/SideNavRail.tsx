@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -17,8 +18,8 @@ export interface SideNavRailProps<K extends string = string> {
   items: SideNavItemSpec<K>[];
   activeKey: K | null;
   onChange?: (key: K) => void;
-  brand?: React.ReactNode;
-  footer?: React.ReactNode;
+  brand?: ReactNode | ((state: { expanded: boolean }) => ReactNode);
+  footer?: ReactNode;
   className?: string;
 }
 
@@ -30,19 +31,37 @@ export function SideNavRail<K extends string = string>({
   footer,
   className,
 }: SideNavRailProps<K>) {
-  const [expanded, setExpanded] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focusWithin, setFocusWithin] = useState(false);
+  const expanded = hovered || focusWithin;
+  const brandContent = typeof brand === 'function' ? brand({ expanded }) : brand;
 
   return (
     <aside
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocusWithin(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setFocusWithin(false);
+        }
+      }}
       className={cn(
         'flex shrink-0 flex-col items-center gap-3 rounded-[32px] bg-navDark px-3 py-5 shadow-nav transition-all duration-300 ease-in-out overflow-hidden',
         expanded ? 'w-52' : 'w-20',
         className
       )}
     >
-      {brand && <div className="mb-2 flex h-10 w-10 items-center justify-center text-white">{brand}</div>}
+      {brandContent && (
+        <div
+          className={cn(
+            'mb-2 flex h-12 items-center overflow-hidden text-white transition-all duration-300 ease-in-out',
+            expanded ? 'w-full justify-start px-1' : 'w-12 justify-center px-0',
+          )}
+        >
+          {brandContent}
+        </div>
+      )}
       {items.map((item) => {
         const Icon = item.icon;
         const active = item.key === activeKey;

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireStaff } from '@/lib/auth/guards';
+import { syncClosedAttendanceDays } from '@/lib/attendance/forgot-checkout';
 import { formatInTimeZone } from 'date-fns-tz';
 
 const OFFICE_TZ = 'Africa/Tunis';
@@ -25,10 +26,17 @@ export async function GET(request: NextRequest) {
   const start = searchParams.get('start');
   const end = searchParams.get('end');
 
+  await syncClosedAttendanceDays(service, {
+    startDate: start ?? undefined,
+    endDate: end ?? undefined,
+    userId: userId ?? undefined,
+  });
+
   let query = service
     .from('attendance')
     .select('date, status, check_in_at, check_out_at, late_minutes, forgot_checkout, profiles!attendance_user_id_fkey(full_name, email)')
     .order('date', { ascending: false })
+    .order('check_in_at', { ascending: false, nullsFirst: false })
     .limit(5000);
 
   if (userId) query = query.eq('user_id', userId);

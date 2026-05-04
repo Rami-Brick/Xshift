@@ -3,6 +3,7 @@ import 'server-only';
 import { addDays, differenceInCalendarDays, max, min, parseISO } from 'date-fns';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { createServiceClient } from '@/lib/supabase/service';
+import { syncClosedAttendanceDays } from '@/lib/attendance/forgot-checkout';
 import { dayOfWeekEnum, effectiveDayOff, isoWeekForDate } from '@/lib/day-off/weeks';
 import { OFFICE_TZ } from '@/lib/utils/date';
 import { timeAsync } from '@/lib/perf/timing';
@@ -136,6 +137,11 @@ export async function getReportsSummary(filters: GetReportsSummaryFilters): Prom
 
   return timeAsync('reports.summary.data', async () => {
     const service = createServiceClient();
+    await syncClosedAttendanceDays(service, {
+      startDate: start,
+      endDate: end,
+      userId: filters.user_id ?? undefined,
+    });
     const dateRange = dateRangeStrings(start, end, OFFICE_TZ);
     const today = formatInTimeZone(new Date(), OFFICE_TZ, 'yyyy-MM-dd');
     const weeks = isoWeeksForDates(dateRange);

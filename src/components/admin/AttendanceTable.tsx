@@ -1,14 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, AlertTriangle, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
+import { addDays } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
+import { fr } from 'date-fns/locale';
 import { Chip } from '@/design-kit/primitives/Chip';
 import { AttendanceEditDialog } from './AttendanceEditDialog';
 import { AttendanceMobileCard } from './AttendanceMobileCard';
 import { AttendanceFiltersSheet } from './AttendanceFiltersSheet';
 import { formatTime, formatDate } from '@/lib/attendance/status';
 import type { AttendanceListItem, Profile } from '@/types';
+
+const OFFICE_TZ = 'Africa/Tunis';
 
 const STATUS_LABEL: Record<string, string> = {
   present: 'Présent',
@@ -19,9 +24,10 @@ const STATUS_LABEL: Record<string, string> = {
   day_off: 'Jour de repos',
 };
 
-function statusVariant(status: string): 'lime' | 'trendDown' | 'neutral' {
+function statusVariant(status: string): 'lime' | 'amber' | 'trendDown' | 'neutral' {
   if (status === 'present') return 'lime';
-  if (status === 'late' || status === 'absent') return 'trendDown';
+  if (status === 'late') return 'amber';
+  if (status === 'absent') return 'trendDown';
   return 'neutral';
 }
 
@@ -55,9 +61,94 @@ function buildSuspectDevices(records: AttendanceListItem[]): Set<string> {
   return suspects;
 }
 
+interface AttendanceDateGroup {
+  date: string;
+  label: string;
+  summary: string;
+  records: AttendanceListItem[];
+}
+
+function checkInSortValue(record: AttendanceListItem): number {
+  return record.check_in_at ? new Date(record.check_in_at).getTime() : Number.NEGATIVE_INFINITY;
+}
+
+function compareAttendanceRecords(a: AttendanceListItem, b: AttendanceListItem): number {
+  const dateDiff = b.date.localeCompare(a.date);
+  if (dateDiff !== 0) return dateDiff;
+
+  const checkInDiff = checkInSortValue(b) - checkInSortValue(a);
+  if (checkInDiff !== 0) return checkInDiff;
+
+  const nameDiff = (a.profiles?.full_name ?? '').localeCompare(b.profiles?.full_name ?? '');
+  if (nameDiff !== 0) return nameDiff;
+
+  return a.id.localeCompare(b.id);
+}
+
+function sortAttendanceRecords(records: AttendanceListItem[]): AttendanceListItem[] {
+  return [...records].sort(compareAttendanceRecords);
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function plural(count: number, singular: string, pluralLabel: string): string {
+  return `${count} ${count > 1 ? pluralLabel : singular}`;
+}
+
+function formatGroupLabel(date: string): string {
+  const today = formatInTimeZone(new Date(), OFFICE_TZ, 'yyyy-MM-dd');
+  const yesterday = formatInTimeZone(addDays(new Date(), -1), OFFICE_TZ, 'yyyy-MM-dd');
+
+  if (date === today) return `Aujourd'hui · ${formatDate(date)}`;
+  if (date === yesterday) return `Hier · ${formatDate(date)}`;
+
+  return capitalize(formatInTimeZone(new Date(`${date}T12:00:00`), OFFICE_TZ, 'EEEE d MMM yyyy', { locale: fr }));
+}
+
+function summarizeGroup(records: AttendanceListItem[]): string {
+  const late = records.filter((r) => r.status === 'late').length;
+  const absent = records.filter((r) => r.status === 'absent').length;
+  const forgot = records.filter((r) => r.forgot_checkout).length;
+  if (late === 0 && absent === 0 && forgot === 0) return '';
+
+  const parts = [plural(records.length, 'entrée', 'entrées')];
+  if (late > 0) parts.push(plural(late, 'retard', 'retards'));
+  if (absent > 0) parts.push(plural(absent, 'absent', 'absents'));
+  if (forgot > 0) parts.push(plural(forgot, 'oubli', 'oublis'));
+
+  return parts.join(' · ');
+}
+
+function groupAttendanceRecords(records: AttendanceListItem[]): AttendanceDateGroup[] {
+  const groups: AttendanceDateGroup[] = [];
+
+  for (const record of records) {
+    const current = groups.at(-1);
+    if (current?.date === record.date) {
+      current.records.push(record);
+      continue;
+    }
+
+    groups.push({
+      date: record.date,
+      label: formatGroupLabel(record.date),
+      summary: '',
+      records: [record],
+    });
+  }
+
+  return groups.map((group) => ({
+    ...group,
+    summary: summarizeGroup(group.records),
+  }));
+}
+
 export function AttendanceTable({ initialRecords, employees, initialFilters, gracePeriodMinutes, canDelete }: AttendanceTableProps) {
-  const [records, setRecords] = useState<AttendanceListItem[]>(initialRecords);
+  const [records, setRecords] = useState<AttendanceListItem[]>(() => sortAttendanceRecords(initialRecords));
   const suspectDevices = useMemo(() => buildSuspectDevices(records), [records]);
+  const groups = useMemo(() => groupAttendanceRecords(records), [records]);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [loading, setLoading] = useState(false);
   const [editTarget, setEditTarget] = useState<AttendanceListItem | 'new' | null>(null);
@@ -78,7 +169,7 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
     const res = await fetch(`/api/attendance/all?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
-      setRecords(data);
+      setRecords(sortAttendanceRecords(data));
     }
     setLoading(false);
   }
@@ -104,9 +195,9 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = saved;
-        return next;
+        return sortAttendanceRecords(next);
       }
-      return [saved, ...prev].sort((a, b) => b.date.localeCompare(a.date));
+      return sortAttendanceRecords([saved, ...prev]);
     });
     setEditTarget(null);
   }
@@ -205,21 +296,33 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
         ) : records.length === 0 ? (
           <div className="bg-surface rounded-xl shadow-softer p-8 text-center text-muted text-sm">Aucune présence pour cette période</div>
         ) : (
-          <div className="space-y-2">
-            {records.map((row) => {
-              const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
-              return (
-                <AttendanceMobileCard
-                  key={row.id}
-                  row={row}
-                  suspect={isSuspect}
-                  gracePeriodMinutes={gracePeriodMinutes}
-                  canDelete={canDelete}
-                  onEdit={setEditTarget}
-                  onDelete={setDeleteTarget}
-                />
-              );
-            })}
+          <div className="space-y-5">
+            {groups.map((group) => (
+              <section key={group.date} className="space-y-2">
+                <div className="flex items-baseline justify-between gap-3 rounded-lg border-t-2 border-subtle bg-soft px-3 py-2">
+                  <p className="text-caption font-bold uppercase tracking-[0.08em] text-muted">
+                    {group.label}
+                  </p>
+                  {group.summary && (
+                    <p className="text-caption text-muted">{group.summary}</p>
+                  )}
+                </div>
+                {group.records.map((row) => {
+                  const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
+                  return (
+                    <AttendanceMobileCard
+                      key={row.id}
+                      row={row}
+                      suspect={isSuspect}
+                      gracePeriodMinutes={gracePeriodMinutes}
+                      canDelete={canDelete}
+                      onEdit={setEditTarget}
+                      onDelete={setDeleteTarget}
+                    />
+                  );
+                })}
+              </section>
+            ))}
           </div>
         )}
       </div>
@@ -246,9 +349,23 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
                 </tr>
               </thead>
               <tbody>
-                {records.map((row) => {
-                  const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
-                  return (
+                {groups.map((group) => (
+                  <Fragment key={group.date}>
+                    <tr className="bg-soft border-t-2 border-subtle">
+                      <td colSpan={8} className="px-4 py-2.5">
+                        <div className="flex items-baseline justify-between gap-4">
+                          <span className="text-caption font-bold uppercase tracking-[0.08em] text-muted">
+                            {group.label}
+                          </span>
+                          {group.summary && (
+                            <span className="text-caption text-muted">{group.summary}</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {group.records.map((row) => {
+                      const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
+                      return (
                   <tr key={row.id} className="border-b border-soft last:border-0 hover:bg-canvas/50 transition">
                     <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-4 py-3 text-ink whitespace-nowrap">
@@ -309,7 +426,9 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
                     </td>
                   </tr>
                   );
-                })}
+                    })}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
           </div>

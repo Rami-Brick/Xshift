@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { cn } from '../utils/cn';
 import { formatDelta } from '../utils/formatters';
 
-type Variant = 'trendUp' | 'trendDown' | 'neutral' | 'lime' | 'dark' | 'brand';
+type Variant = 'trendUp' | 'trendDown' | 'neutral' | 'lime' | 'amber' | 'dark' | 'brand';
 
 export interface ChipProps {
   variant?: Variant;
@@ -17,6 +17,7 @@ const variantClasses: Record<Variant, string> = {
   trendDown: 'bg-trend-down text-white',
   neutral: 'bg-soft text-ink',
   lime: 'bg-data-lime text-ink',
+  amber: 'bg-[#FFC966] text-[#3D2600]',
   dark: 'bg-navDark text-white',
   brand: 'bg-brand text-white',
 };

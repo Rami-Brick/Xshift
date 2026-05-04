@@ -25,19 +25,27 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const { data: before } = await service
     .from('attendance')
-    .select('id, user_id, date, check_in_at, check_out_at, status, late_minutes, note')
+    .select('id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout, note')
     .eq('id', id)
     .single();
   if (!before) {
     return NextResponse.json({ error: 'Entrée introuvable' }, { status: 404 });
   }
 
+  const updates: Record<string, unknown> = { ...parsed.data, updated_by: actorId };
+  const nextCheckOutAt =
+    parsed.data.check_out_at === undefined ? before.check_out_at : parsed.data.check_out_at;
+
+  if (nextCheckOutAt) {
+    updates.forgot_checkout = false;
+  }
+
   const { data, error } = await service
     .from('attendance')
-    .update({ ...parsed.data, updated_by: actorId })
+    .update(updates)
     .eq('id', id)
     .select(
-      'id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout, note, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)',
+      'id, user_id, date, check_in_at, check_out_at, status, late_minutes, forgot_checkout, note, device_id, device_label, profiles!attendance_user_id_fkey(id, full_name, email, work_start_time)',
     )
     .single();
 

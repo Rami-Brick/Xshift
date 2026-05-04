@@ -16,9 +16,10 @@ const STATUS_LABEL: Record<string, string> = {
   day_off: 'Jour de repos',
 };
 
-function statusVariant(status: string): 'lime' | 'trendDown' | 'neutral' {
+function statusVariant(status: string): 'lime' | 'amber' | 'trendDown' | 'neutral' {
   if (status === 'present') return 'lime';
-  if (status === 'late' || status === 'absent') return 'trendDown';
+  if (status === 'late') return 'amber';
+  if (status === 'absent') return 'trendDown';
   return 'neutral';
 }
 

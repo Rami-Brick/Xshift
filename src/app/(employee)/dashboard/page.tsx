@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { timeAsync } from '@/lib/perf/timing';
 import { TodayCard } from '@/components/attendance/TodayCard';
 import { todayDateInOffice } from '@/lib/utils/date';
+import { syncClosedAttendanceDays } from '@/lib/attendance/forgot-checkout';
 import { formatInTimeZone } from 'date-fns-tz';
 import { fr } from 'date-fns/locale';
 import {
@@ -19,6 +20,9 @@ export default async function DashboardPage() {
 
   const today = todayDateInOffice();
   const now = new Date();
+  const service = createServiceClient();
+
+  await syncClosedAttendanceDays(service, { userId: profile.id, startDate: today, endDate: today });
 
   const [{ data: todayRecord }, { data: settings }, { data: unresolvedPriorDays }] = await timeAsync(
     'page.employee.dashboard.data',
@@ -48,7 +52,6 @@ export default async function DashboardPage() {
   const firstName = profile.full_name.split(' ')[0];
 
   const week = isoWeekForNow();
-  const service = createServiceClient();
   const { data: overrides } = await service
     .from('day_off_changes')
     .select('iso_year, iso_week, new_day, status')

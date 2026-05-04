@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Clock, Users, CalendarDays, CalendarOff, BarChart2,
 } from 'lucide-react';
 import { SideNavRail, type SideNavItemSpec } from '@/design-kit/compounds/SideNavRail';
+import { cn } from '@/lib/utils/cn';
 
 type NavKey = 'dashboard' | 'attendance' | 'employees' | 'leave' | 'day-off' | 'reports';
 
@@ -42,15 +43,30 @@ export function AdminSidebar() {
     <SideNavRail
       items={NAV_ITEMS}
       activeKey={activeKey}
-      brand={
-        <Image
-          src="/Xshift.svg"
-          alt="Xshift"
-          width={40}
-          height={40}
-          className="h-10 w-10 rounded-xl object-contain"
-        />
-      }
+      brand={({ expanded }) => (
+        <div className="relative h-12 w-full">
+          <Image
+            src="/icon-sidebar.png"
+            alt={expanded ? '' : 'Xshift'}
+            width={48}
+            height={48}
+            className={cn(
+              'absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2 object-contain transition-all duration-300 ease-in-out',
+              expanded ? 'scale-90 opacity-0' : 'scale-100 opacity-100',
+            )}
+          />
+          <Image
+            src="/logo-sidebar.png"
+            alt={expanded ? 'Xshift' : ''}
+            width={180}
+            height={60}
+            className={cn(
+              'absolute left-0 top-1/2 h-12 w-[176px] -translate-y-1/2 object-contain transition-all duration-300 ease-in-out',
+              expanded ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
+            )}
+          />
+        </div>
+      )}
     />
   );
 }
