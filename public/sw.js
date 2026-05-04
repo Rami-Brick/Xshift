@@ -1,12 +1,16 @@
-const CACHE_NAME = 'xshift-static-v1';
+const CACHE_NAME = 'xshift-static-v2';
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/favicon.svg',
+  '/favicon.ico',
   '/Xshift.svg',
   '/apple-touch-icon.png',
+  '/icons/icon.svg',
+  '/icons/icon-maskable.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
+  '/icons/status-bar.png',
 ];
 
 self.addEventListener('install', (event) => {

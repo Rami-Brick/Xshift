@@ -111,8 +111,9 @@ function summarizeGroup(records: AttendanceListItem[]): string {
   const late = records.filter((r) => r.status === 'late').length;
   const absent = records.filter((r) => r.status === 'absent').length;
   const forgot = records.filter((r) => r.forgot_checkout).length;
-  const parts = [plural(records.length, 'entrée', 'entrées')];
+  if (late === 0 && absent === 0 && forgot === 0) return '';
 
+  const parts = [plural(records.length, 'entrée', 'entrées')];
   if (late > 0) parts.push(plural(late, 'retard', 'retards'));
   if (absent > 0) parts.push(plural(absent, 'absent', 'absents'));
   if (forgot > 0) parts.push(plural(forgot, 'oubli', 'oublis'));
@@ -298,13 +299,13 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
           <div className="space-y-5">
             {groups.map((group) => (
               <section key={group.date} className="space-y-2">
-                <div className="sticky top-0 z-10 flex items-center gap-3 bg-canvas/95 py-2 backdrop-blur">
-                  <div className="h-px flex-1 bg-soft" />
-                  <div className="min-w-0 text-center">
-                    <p className="text-sm font-bold text-ink leading-tight">{group.label}</p>
-                    <p className="text-caption font-semibold text-muted leading-tight">{group.summary}</p>
-                  </div>
-                  <div className="h-px flex-1 bg-soft" />
+                <div className="flex items-baseline justify-between gap-3 rounded-lg border-t-2 border-subtle bg-soft px-3 py-2">
+                  <p className="text-caption font-bold uppercase tracking-[0.08em] text-muted">
+                    {group.label}
+                  </p>
+                  {group.summary && (
+                    <p className="text-caption text-muted">{group.summary}</p>
+                  )}
                 </div>
                 {group.records.map((row) => {
                   const isSuspect = !!row.device_id && suspectDevices.has(row.device_id);
@@ -350,15 +351,15 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
               <tbody>
                 {groups.map((group) => (
                   <Fragment key={group.date}>
-                    <tr className="sticky top-0 z-10 bg-canvas/95">
-                      <td colSpan={8} className="px-4 py-2">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="h-px w-8 bg-soft" />
-                            <span className="text-sm font-bold text-ink whitespace-nowrap">{group.label}</span>
-                            <span className="h-px flex-1 bg-soft" />
-                          </div>
-                          <span className="text-caption font-semibold text-muted">{group.summary}</span>
+                    <tr className="bg-soft border-t-2 border-subtle">
+                      <td colSpan={8} className="px-4 py-2.5">
+                        <div className="flex items-baseline justify-between gap-4">
+                          <span className="text-caption font-bold uppercase tracking-[0.08em] text-muted">
+                            {group.label}
+                          </span>
+                          {group.summary && (
+                            <span className="text-caption text-muted">{group.summary}</span>
+                          )}
                         </div>
                       </td>
                     </tr>
