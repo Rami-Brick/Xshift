@@ -22,18 +22,21 @@ type FormData = {
   user_id: string;
   date: string;
   status: 'present' | 'late' | 'absent' | 'leave' | 'holiday' | 'day_off';
-  check_in_at: string;
-  check_out_at: string;
+  check_in_time: string;
+  check_out_time: string;
   late_minutes: number;
   note: string;
 };
 
-function calcLateMinutesLocal(workStartTime: string, checkInLocal: string): number {
-  // checkInLocal: 'yyyy-MM-ddTHH:mm' — treat as Tunis local time
-  const dateStr = checkInLocal.slice(0, 10);
-  const startUTC = fromZonedTime(`${dateStr} ${workStartTime.slice(0, 5)}`, OFFICE_TZ);
-  const checkInUTC = fromZonedTime(checkInLocal.replace('T', ' '), OFFICE_TZ);
+function calcLateMinutesLocal(workStartTime: string, date: string, checkInTime: string): number {
+  const startUTC = fromZonedTime(`${date} ${workStartTime.slice(0, 5)}`, OFFICE_TZ);
+  const checkInUTC = fromZonedTime(`${date} ${checkInTime}`, OFFICE_TZ);
   return differenceInMinutes(checkInUTC, startUTC);
+}
+
+function timeOnDateToIso(date: string, time: string): string | null {
+  if (!date || !time) return null;
+  return fromZonedTime(`${date} ${time}`, OFFICE_TZ).toISOString();
 }
 
 export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, onClose, onSuccess }: Props) {
@@ -51,30 +54,33 @@ export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, on
           user_id: record.user_id,
           date: record.date,
           status: record.status,
-          check_in_at: record.check_in_at
-            ? formatInTimeZone(new Date(record.check_in_at), OFFICE_TZ, "yyyy-MM-dd'T'HH:mm")
+          check_in_time: record.check_in_at
+            ? formatInTimeZone(new Date(record.check_in_at), OFFICE_TZ, 'HH:mm')
             : '',
-          check_out_at: record.check_out_at
-            ? formatInTimeZone(new Date(record.check_out_at), OFFICE_TZ, "yyyy-MM-dd'T'HH:mm")
+          check_out_time: record.check_out_at
+            ? formatInTimeZone(new Date(record.check_out_at), OFFICE_TZ, 'HH:mm')
             : '',
           late_minutes: record.late_minutes ?? 0,
           note: record.note ?? '',
         }
       : {
+          user_id: '',
           status: 'present',
           date: formatInTimeZone(new Date(), OFFICE_TZ, 'yyyy-MM-dd'),
-          check_in_at: '',
-          check_out_at: '',
+          check_in_time: '',
+          check_out_time: '',
           late_minutes: 0,
           note: '',
         },
   });
 
-  const checkInAt = useWatch({ control, name: 'check_in_at' });
+  const checkInTime = useWatch({ control, name: 'check_in_time' });
+  const date = useWatch({ control, name: 'date' });
   const userId = useWatch({ control, name: 'user_id' });
 
   useEffect(() => {
-    if (!checkInAt) return;
+    const attendanceDate = isEdit ? record.date : date;
+    if (!checkInTime || !attendanceDate) return;
 
     const workStartTime = isEdit
       ? record.profiles?.work_start_time
@@ -82,10 +88,10 @@ export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, on
 
     if (!workStartTime) return;
 
-    const lateMin = calcLateMinutesLocal(workStartTime, checkInAt);
+    const lateMin = calcLateMinutesLocal(workStartTime, attendanceDate, checkInTime);
     setValue('late_minutes', lateMin, { shouldDirty: true });
     setValue('status', lateMin > gracePeriodMinutes ? 'late' : 'present', { shouldDirty: true });
-  }, [checkInAt, userId, isEdit, record, employees, gracePeriodMinutes, setValue]);
+  }, [checkInTime, date, userId, isEdit, record, employees, gracePeriodMinutes, setValue]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -96,11 +102,12 @@ export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, on
   }, [onClose]);
 
   async function onSubmit(data: FormData) {
+    const attendanceDate = isEdit ? record.date : data.date;
     const payload = {
       ...(isEdit ? {} : { user_id: data.user_id, date: data.date }),
       status: data.status,
-      check_in_at: data.check_in_at ? new Date(data.check_in_at).toISOString() : null,
-      check_out_at: data.check_out_at ? new Date(data.check_out_at).toISOString() : null,
+      check_in_at: timeOnDateToIso(attendanceDate, data.check_in_time),
+      check_out_at: timeOnDateToIso(attendanceDate, data.check_out_time),
       late_minutes: Number(data.late_minutes),
       note: data.note || null,
     };
@@ -160,6 +167,12 @@ export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, on
             </>
           )}
 
+          {isEdit && (
+            <Field label="Date">
+              <input value={record.date} type="date" readOnly disabled className={`${inputCls} opacity-70`} />
+            </Field>
+          )}
+
           <Field label="Statut" error={errors.status?.message}>
             <select {...register('status')} className={inputCls}>
               <option value="present">Présent</option>
@@ -172,11 +185,11 @@ export function AttendanceEditDialog({ record, employees, gracePeriodMinutes, on
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Arrivée" error={errors.check_in_at?.message}>
-              <input {...register('check_in_at')} type="datetime-local" className={inputCls} />
+            <Field label="Arrivée" error={errors.check_in_time?.message}>
+              <input {...register('check_in_time')} type="time" className={inputCls} />
             </Field>
-            <Field label="Départ" error={errors.check_out_at?.message}>
-              <input {...register('check_out_at')} type="datetime-local" className={inputCls} />
+            <Field label="Départ" error={errors.check_out_time?.message}>
+              <input {...register('check_out_time')} type="time" className={inputCls} />
             </Field>
           </div>
 
