@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     .from('attendance')
     .select('date, status, check_in_at, check_out_at, late_minutes, forgot_checkout, profiles!attendance_user_id_fkey(full_name, email)')
     .order('date', { ascending: false })
+    .order('check_in_at', { ascending: false, nullsFirst: false })
     .limit(5000);
 
   if (userId) query = query.eq('user_id', userId);

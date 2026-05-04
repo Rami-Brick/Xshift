@@ -56,8 +56,29 @@ function buildSuspectDevices(records: AttendanceListItem[]): Set<string> {
   return suspects;
 }
 
+function checkInSortValue(record: AttendanceListItem): number {
+  return record.check_in_at ? new Date(record.check_in_at).getTime() : Number.NEGATIVE_INFINITY;
+}
+
+function compareAttendanceRecords(a: AttendanceListItem, b: AttendanceListItem): number {
+  const dateDiff = b.date.localeCompare(a.date);
+  if (dateDiff !== 0) return dateDiff;
+
+  const checkInDiff = checkInSortValue(b) - checkInSortValue(a);
+  if (checkInDiff !== 0) return checkInDiff;
+
+  const nameDiff = (a.profiles?.full_name ?? '').localeCompare(b.profiles?.full_name ?? '');
+  if (nameDiff !== 0) return nameDiff;
+
+  return a.id.localeCompare(b.id);
+}
+
+function sortAttendanceRecords(records: AttendanceListItem[]): AttendanceListItem[] {
+  return [...records].sort(compareAttendanceRecords);
+}
+
 export function AttendanceTable({ initialRecords, employees, initialFilters, gracePeriodMinutes, canDelete }: AttendanceTableProps) {
-  const [records, setRecords] = useState<AttendanceListItem[]>(initialRecords);
+  const [records, setRecords] = useState<AttendanceListItem[]>(() => sortAttendanceRecords(initialRecords));
   const suspectDevices = useMemo(() => buildSuspectDevices(records), [records]);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [loading, setLoading] = useState(false);
@@ -79,7 +100,7 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
     const res = await fetch(`/api/attendance/all?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
-      setRecords(data);
+      setRecords(sortAttendanceRecords(data));
     }
     setLoading(false);
   }
@@ -105,9 +126,9 @@ export function AttendanceTable({ initialRecords, employees, initialFilters, gra
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = saved;
-        return next;
+        return sortAttendanceRecords(next);
       }
-      return [saved, ...prev].sort((a, b) => b.date.localeCompare(a.date));
+      return sortAttendanceRecords([saved, ...prev]);
     });
     setEditTarget(null);
   }
