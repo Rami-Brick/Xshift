@@ -1,7 +1,9 @@
 import { Suspense } from 'react';
 import { requireUserCached } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { timeAsync } from '@/lib/perf/timing';
+import { syncClosedAttendanceDays } from '@/lib/attendance/forgot-checkout';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { formatTime, formatDate } from '@/lib/attendance/status';
@@ -21,7 +23,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 function statusClasses(status: string): string {
   if (status === 'present') return 'bg-trend-up/10 text-trend-up';
-  if (status === 'late' || status === 'absent') return 'bg-trend-down/10 text-trend-down';
+  if (status === 'late') return 'bg-[#FFC966] text-[#3D2600]';
+  if (status === 'absent') return 'bg-trend-down/10 text-trend-down';
   return 'bg-soft text-muted';
 }
 
@@ -74,6 +77,9 @@ async function HistoryContent({
   monthEnd: string;
 }) {
   const supabase = await createClient();
+  const service = createServiceClient();
+
+  await syncClosedAttendanceDays(service, { userId, startDate: monthStart, endDate: monthEnd });
 
   const { data: records } = await timeAsync('page.employee.history.data', () =>
     supabase

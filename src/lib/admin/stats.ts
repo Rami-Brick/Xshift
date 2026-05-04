@@ -5,6 +5,7 @@ import { parseISO } from 'date-fns';
 import { createServiceClient } from '@/lib/supabase/service';
 import { todayDateInOffice } from '@/lib/utils/date';
 import { dayOfWeekEnum, effectiveDayOff, isoWeekForDate } from '@/lib/day-off/weeks';
+import { syncClosedAttendanceDays } from '@/lib/attendance/forgot-checkout';
 import { timeAsync } from '@/lib/perf/timing';
 import type {
   AdminStats,
@@ -52,6 +53,8 @@ export async function getAdminStats(targetDate?: string): Promise<AdminStats> {
     const today = todayDateInOffice();
     const date = targetDate ?? today;
     const isToday = date === today;
+
+    await syncClosedAttendanceDays(service, { startDate: date, endDate: date });
 
     const dateAtNoon = parseISO(`${date}T12:00:00`);
     const { iso_year, iso_week } = isoWeekForDate(dateAtNoon);
@@ -271,4 +274,3 @@ function byRosterOrder(a: RosterEntry, b: RosterEntry): number {
   if (diff !== 0) return diff;
   return a.full_name.localeCompare(b.full_name);
 }
-

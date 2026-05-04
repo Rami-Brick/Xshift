@@ -25,9 +25,9 @@ const STATUS_LABEL: Record<string, string> = {
   day_off: 'Jour de repos',
 };
 
-const STATUS_TONE: Record<string, 'lime' | 'trendDown' | 'neutral'> = {
+const STATUS_TONE: Record<string, 'lime' | 'amber' | 'trendDown' | 'neutral'> = {
   present: 'lime',
-  late: 'trendDown',
+  late: 'amber',
   absent: 'trendDown',
   leave: 'neutral',
   holiday: 'neutral',

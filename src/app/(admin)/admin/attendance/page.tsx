@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { requireStaffCached } from '@/lib/auth/guards';
 import { canDeleteAttendance } from '@/lib/auth/roles';
 import { timeAsync } from '@/lib/perf/timing';
+import { syncClosedAttendanceDays } from '@/lib/attendance/forgot-checkout';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { AttendanceTable } from '@/components/admin/AttendanceTable';
@@ -47,6 +48,8 @@ async function AdminAttendanceContent({
 }) {
   const { profile } = await requireStaffCached();
   const service = createServiceClient();
+
+  await syncClosedAttendanceDays(service, { startDate: start, endDate: end, userId: filters.user_id });
 
   const [attendanceResult, employeesResult, settingsResult] = await timeAsync('page.admin.attendance.data', () => Promise.all([
     (() => {

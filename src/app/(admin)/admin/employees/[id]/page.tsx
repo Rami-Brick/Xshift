@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { requireStaffCached } from '@/lib/auth/guards';
 import { canManageEmployeeAccounts } from '@/lib/auth/roles';
 import { timeAsync } from '@/lib/perf/timing';
+import { syncClosedAttendanceDays } from '@/lib/attendance/forgot-checkout';
 import { notFound } from 'next/navigation';
 import { formatInTimeZone } from 'date-fns-tz';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -22,9 +23,10 @@ const STATUS_LABEL: Record<string, string> = {
   day_off: 'Jour de repos',
 };
 
-function statusChip(status: string): 'lime' | 'trendDown' | 'neutral' {
+function statusChip(status: string): 'lime' | 'amber' | 'trendDown' | 'neutral' {
   if (status === 'present') return 'lime';
-  if (status === 'late' || status === 'absent') return 'trendDown';
+  if (status === 'late') return 'amber';
+  if (status === 'absent') return 'trendDown';
   return 'neutral';
 }
 
@@ -40,6 +42,8 @@ export default async function AdminEmployeeDetailPage({ params }: PageProps) {
   const now = new Date();
   const monthStart = formatInTimeZone(startOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
   const monthEnd = formatInTimeZone(endOfMonth(now), OFFICE_TZ, 'yyyy-MM-dd');
+
+  await syncClosedAttendanceDays(service, { userId: id, startDate: monthStart, endDate: monthEnd });
 
   const [{ data: profile }, { data: monthRecords }, { data: recent }] = await timeAsync('page.admin.employee.detail.data', () => Promise.all([
     service
